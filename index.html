@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Streamnight · 4K Ultra</title>
+    <title>Streamnight · P2P</title>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -13,7 +13,7 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            font-family: system-ui, -apple-system, sans-serif;
+            font-family: Arial, sans-serif;
         }
         .video-container {
             flex: 1;
@@ -25,35 +25,51 @@
         }
         video {
             width: 100%;
-            height: 100%;
-            object-fit: contain;
+            max-height: 100%;
             background: #000;
         }
         
-        /* Botones flotantes */
+        /* Botones básicos */
         .float-btn {
             position: absolute;
             bottom: 80px;
             width: 60px;
             height: 60px;
             border-radius: 30px;
-            background: #ff0000;
+            background: red;
             color: white;
             border: none;
-            font-size: 28px;
+            font-size: 30px;
             cursor: pointer;
             z-index: 100;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 15px rgba(255,0,0,0.5);
-            transition: transform 0.2s;
         }
-        .float-btn:active { transform: scale(0.9); }
         #playPauseBtn { left: 20px; }
         #fullscreenBtn { right: 20px; }
         
-        /* Overlay de play/pause */
+        /* Badges simples */
+        .status {
+            position: absolute;
+            top: 10px; left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 10;
+        }
+        .peer-count {
+            position: absolute;
+            top: 10px; right: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 10;
+        }
+        
+        /* Overlay play/pause */
         .play-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -67,86 +83,8 @@
             z-index: 50;
         }
         .play-overlay.visible { opacity: 1; }
-        .play-icon {
-            font-size: 100px;
-            color: white;
-            text-shadow: 0 0 30px red;
-            animation: pulse 1s infinite;
-        }
-        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+        .play-icon { font-size: 80px; color: white; }
         
-        /* Badges de estado */
-        .status-badge {
-            position: absolute;
-            top: 10px;
-            padding: 8px 16px;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(5px);
-            border-radius: 30px;
-            font-size: 12px;
-            border: 1px solid #333;
-            z-index: 10;
-            font-weight: 500;
-        }
-        #status { left: 10px; }
-        #peerCount { 
-            right: 10px; 
-            border-color: #ff0000;
-            background: rgba(255,0,0,0.2);
-        }
-        
-        /* Badge de calidad ULTRA */
-        .quality-ultra {
-            position: absolute;
-            top: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(45deg, #ff0000, #990000);
-            color: white;
-            padding: 8px 25px;
-            border-radius: 40px;
-            font-size: 14px;
-            font-weight: bold;
-            letter-spacing: 2px;
-            border: 1px solid rgba(255,255,255,0.3);
-            box-shadow: 0 0 20px rgba(255,0,0,0.5);
-            z-index: 15;
-            text-transform: uppercase;
-            animation: glow 2s infinite;
-        }
-        @keyframes glow { 0%,100%{box-shadow:0 0 20px red} 50%{box-shadow:0 0 40px red} }
-        
-        /* Estadísticas en tiempo real */
-        .stats-overlay {
-            position: absolute;
-            bottom: 150px;
-            left: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(5px);
-            border-radius: 20px;
-            padding: 15px;
-            display: flex;
-            gap: 15px;
-            justify-content: space-around;
-            border: 1px solid #ff0000;
-            z-index: 15;
-            font-size: 12px;
-        }
-        .stat-item {
-            text-align: center;
-        }
-        .stat-label {
-            color: #888;
-            margin-bottom: 5px;
-        }
-        .stat-value {
-            color: #ff0000;
-            font-weight: bold;
-            font-size: 16px;
-        }
-        
-        /* Barra de herramientas */
         .toolbar {
             background: #111;
             padding: 15px;
@@ -156,128 +94,77 @@
         }
         .btn {
             flex: 1;
-            padding: 16px;
+            padding: 15px;
             background: #222;
             color: white;
             border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: bold;
+            border-radius: 8px;
+            font-size: 16px;
             cursor: pointer;
-            transition: all 0.2s;
         }
-        .btn:active { transform: scale(0.95); background: #333; }
-        .btn-red { 
-            background: linear-gradient(45deg, #ff0000, #cc0000);
-            box-shadow: 0 4px 15px rgba(255,0,0,0.5);
-        }
+        .btn-red { background: red; }
         
-        /* Paneles modales */
-        .modal {
+        .panel {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.95);
-            backdrop-filter: blur(5px);
             display: none;
-            align-items: center;
-            justify-content: center;
+            padding: 20px;
             z-index: 200;
         }
-        .modal.active { display: flex; }
-        .modal-content {
+        .panel.active { display: flex; align-items: center; justify-content: center; }
+        .panel-content {
             background: #111;
-            padding: 30px;
-            border-radius: 25px;
+            padding: 20px;
+            border-radius: 10px;
             width: 90%;
             max-width: 400px;
-            border: 1px solid #ff0000;
-            box-shadow: 0 0 30px rgba(255,0,0,0.2);
-        }
-        .modal-content h3 {
-            color: #ff0000;
-            margin-bottom: 20px;
-            font-size: 24px;
         }
         input {
             width: 100%;
             padding: 15px;
-            margin: 15px 0;
+            margin: 10px 0;
             background: #000;
             color: white;
             border: 1px solid #333;
-            border-radius: 12px;
-            font-size: 14px;
+            border-radius: 5px;
         }
-        input:focus { outline: none; border-color: #ff0000; }
-        .close {
-            float: right;
-            font-size: 28px;
-            cursor: pointer;
-            color: #888;
-            transition: color 0.2s;
-        }
-        .close:hover { color: #ff0000; }
-        
-        /* Chat mejorado */
         #chatMessages {
             height: 300px;
             overflow-y: auto;
             background: #000;
-            padding: 15px;
-            margin: 15px 0;
+            padding: 10px;
+            margin-bottom: 10px;
             border: 1px solid #333;
-            border-radius: 15px;
         }
         .message {
             margin-bottom: 10px;
-            padding: 12px 18px;
+            padding: 8px;
             background: #1a1a1a;
-            border-radius: 20px;
-            max-width: 85%;
-            animation: slideIn 0.3s;
+            border-radius: 5px;
         }
-        .message.own {
-            background: #ff0000;
-            margin-left: auto;
-        }
-        @keyframes slideIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-        .chat-input-group {
-            display: flex;
-            gap: 8px;
-        }
-        .chat-input-group input { margin: 0; flex:1; }
-        .chat-input-group button {
-            width: 60px;
-            background: #ff0000;
-            border: none;
-            border-radius: 12px;
-            color: white;
-            font-size: 20px;
+        .message.own { background: red; text-align: right; }
+        .close {
+            float: right;
+            font-size: 24px;
             cursor: pointer;
-            transition: transform 0.2s;
+            color: #888;
         }
-        .chat-input-group button:active { transform: scale(0.9); }
-        
-        /* Advertencia orientación */
         .orientation-warning {
             position: absolute;
-            bottom: 220px;
+            bottom: 150px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.9);
-            color: #ff0000;
-            padding: 12px 25px;
-            border-radius: 40px;
-            font-size: 14px;
-            border: 1px solid #ff0000;
+            background: rgba(0,0,0,0.8);
+            color: red;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            border: 1px solid red;
             display: none;
             z-index: 150;
-            white-space: nowrap;
-            font-weight: bold;
-            backdrop-filter: blur(5px);
         }
-        .orientation-warning.visible { display: block; animation: slideUp 0.3s; }
-        @keyframes slideUp { from{opacity:0;transform:translateX(-50%) translateY(20px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+        .orientation-warning.visible { display: block; }
     </style>
 </head>
 <body>
@@ -290,136 +177,105 @@
         <div class="play-icon" id="playIcon">▶️</div>
     </div>
     
-    <!-- Botones flotantes -->
+    <!-- Botones -->
     <button class="float-btn" id="playPauseBtn" onclick="togglePlay(event)">▶️</button>
     <button class="float-btn" id="fullscreenBtn" onclick="toggleFullscreen(event)">⛶</button>
     
-    <!-- Badges -->
-    <div class="status-badge" id="status">Iniciando...</div>
-    <div class="status-badge" id="peerCount">0</div>
-    
-    <!-- Badge ULTRA calidad -->
-    <div class="quality-ultra" id="qualityBadge">⚡ 4K ULTRA · 50 MBPS ⚡</div>
-    
-    <!-- Estadísticas en vivo -->
-    <div class="stats-overlay" id="statsOverlay">
-        <div class="stat-item">
-            <div class="stat-label">BITRATE</div>
-            <div class="stat-value" id="statBitrate">50 Mbps</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">RESOLUCIÓN</div>
-            <div class="stat-value" id="statResolution">4K</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">FPS</div>
-            <div class="stat-value" id="statFPS">60</div>
-        </div>
-    </div>
+    <!-- Estado -->
+    <div class="status" id="status">Iniciando...</div>
+    <div class="peer-count" id="peerCount">0 conectados</div>
     
     <!-- Advertencia orientación -->
     <div class="orientation-warning" id="orientationWarning">
-        🔄 GIRA EL DISPOSITIVO PARA 4K ULTRA
+        🔄 Gira el teléfono
     </div>
 </div>
 
-<!-- Barra de herramientas -->
+<!-- Toolbar -->
 <div class="toolbar">
     <input type="file" id="fileInput" hidden accept="video/*" onchange="startStream()">
-    <button class="btn btn-red" onclick="document.getElementById('fileInput').click()">📹 EMITIR 4K</button>
-    <button class="btn" onclick="showModal('invite')">🔗 INVITAR</button>
-    <button class="btn" onclick="showModal('chat')">💬 CHAT</button>
+    <button class="btn btn-red" onclick="document.getElementById('fileInput').click()">📹 EMITIR</button>
+    <button class="btn" onclick="showPanel('invite')">🔗 INVITAR</button>
+    <button class="btn" onclick="showPanel('chat')">💬 CHAT</button>
 </div>
 
-<!-- Modal Invitación -->
-<div id="inviteModal" class="modal" onclick="hideModal('invite')">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <span class="close" onclick="hideModal('invite')">✕</span>
-        <h3>🔗 COMPARTIR 4K</h3>
-        <p style="color:#888; margin-bottom:15px;">CALIDAD ULTRA · SIN COMPRESIÓN · 50 MBPS</p>
-        <input type="text" id="inviteLink" readonly value="Generando...">
-        <button onclick="copyLink()" style="width:100%; background:linear-gradient(45deg,#ff0000,#cc0000); color:white; border:none; padding:15px; border-radius:12px; font-weight:bold; font-size:16px; cursor:pointer;">📋 COPIAR ENLACE 4K</button>
+<!-- Panel Invitación -->
+<div id="invitePanel" class="panel" onclick="hidePanel('invite')">
+    <div class="panel-content" onclick="event.stopPropagation()">
+        <span class="close" onclick="hidePanel('invite')">✕</span>
+        <h3 style="color:red;">Compartir</h3>
+        <input type="text" id="inviteLink" readonly>
+        <button onclick="copyLink()" style="width:100%; background:red; color:white; border:none; padding:15px; border-radius:5px;">COPIAR</button>
     </div>
 </div>
 
-<!-- Modal Chat -->
-<div id="chatModal" class="modal" onclick="hideModal('chat')">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <span class="close" onclick="hideModal('chat')">✕</span>
-        <h3>💬 CHAT 4K</h3>
+<!-- Panel Chat -->
+<div id="chatPanel" class="panel" onclick="hidePanel('chat')">
+    <div class="panel-content" onclick="event.stopPropagation()">
+        <span class="close" onclick="hidePanel('chat')">✕</span>
+        <h3 style="color:red;">Chat</h3>
         <div id="chatMessages"></div>
-        <div class="chat-input-group">
-            <input type="text" id="chatInput" placeholder="Escribe un mensaje..." onkeypress="if(event.key==='Enter') sendMessage()">
-            <button onclick="sendMessage()">➤</button>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="chatInput" placeholder="Mensaje..." style="flex:1;">
+            <button onclick="sendMessage()" style="background:red; color:white; border:none; width:60px; border-radius:5px;">➤</button>
         </div>
     </div>
 </div>
 
 <script>
     // ============================================
-    // CONFIGURACIÓN PROFESIONAL
+    // VERSIÓN SIMPLE QUE FUNCIONA
     // ============================================
-    const CONFIG = {
-        BITRATE: 50000000,      // 50 Mbps
-        FPS: 60,                 // 60 frames por segundo
-        RESOLUTION: {
-            width: 3840,         // 4K
-            height: 2160
-        },
-        STUN_SERVERS: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' }
-        ]
-    };
-
     const video = document.getElementById('video');
     let peer, connections = [], localStream = null;
     let isBroadcasting = false;
     let playTimeout;
-    let statsInterval;
 
-    // ============================================
-    // INICIALIZACIÓN
-    // ============================================
     function init() {
-        peer = new Peer({
-            config: { iceServers: CONFIG.STUN_SERVERS }
-        });
+        // Peer SIN configuraciones complejas
+        peer = new Peer();
 
         peer.on('open', (id) => {
-            document.getElementById('status').innerHTML = `🟢 ${id.substring(0,6)}`;
-            const baseUrl = window.location.href.split('?')[0];
-            document.getElementById('inviteLink').value = baseUrl + '?connect=' + id;
+            document.getElementById('status').innerText = 'ID: ' + id.substring(0,6);
+            const link = window.location.href.split('?')[0] + '?id=' + id;
+            document.getElementById('inviteLink').value = link;
             
+            // Auto-conectar
             const urlParams = new URLSearchParams(window.location.search);
-            const targetId = urlParams.get('connect');
-            if (targetId && targetId !== id) connectToPeer(targetId);
-            
-            // Iniciar estadísticas
-            startStatsMonitoring();
+            const targetId = urlParams.get('id');
+            if (targetId && targetId !== id) {
+                connectToPeer(targetId);
+            }
         });
 
-        peer.on('connection', (conn) => setupConnection(conn));
+        // Conexiones de datos
+        peer.on('connection', (conn) => {
+            setupConnection(conn);
+        });
 
+        // Llamadas de video
         peer.on('call', (call) => {
-            call.answer(localStream || null);
+            // Si estamos emitiendo, responder con nuestro stream
+            if (localStream) {
+                call.answer(localStream);
+            } else {
+                call.answer();
+            }
+            
             call.on('stream', (remoteStream) => {
                 video.srcObject = remoteStream;
                 video.play();
                 updatePeerCount('add');
-                hidePlayOverlay();
-                updateStatsFromStream(remoteStream);
             });
         });
-
+        
+        // Detectar orientación
         checkOrientation();
         window.addEventListener('orientationchange', checkOrientation);
     }
 
     // ============================================
-    // EMITIR CON CALIDAD ULTRA
+    // EMITIR (SIMPLE)
     // ============================================
     function startStream() {
         const file = document.getElementById('fileInput').files[0];
@@ -428,79 +284,32 @@
         // Reproducir localmente
         video.src = URL.createObjectURL(file);
         video.play();
-        updatePlayButton('play');
+        document.getElementById('playPauseBtn').innerText = '⏸️';
 
+        // Capturar stream después de cargar
         video.onloadeddata = () => {
             setTimeout(() => {
-                try {
-                    // Capturar con máxima calidad
-                    if (video.captureStream) {
-                        localStream = video.captureStream(CONFIG.FPS);
-                    } else if (video.mozCaptureStream) {
-                        localStream = video.mozCaptureStream(CONFIG.FPS);
-                    }
-
-                    if (localStream) {
-                        // ========================================
-                        // OPTIMIZACIONES DE CALIDAD MÁXIMA
-                        // ========================================
-                        const videoTrack = localStream.getVideoTracks()[0];
-                        if (videoTrack) {
-                            // Forzar 4K y 60fps
-                            videoTrack.applyConstraints({
-                                width: CONFIG.RESOLUTION.width,
-                                height: CONFIG.RESOLUTION.height,
-                                frameRate: CONFIG.FPS,
-                                bitrate: CONFIG.BITRATE,
-                                // Codecs de máxima calidad
-                                codec: 'video/H264',
-                                // Sin compresión
-                                googCpuOveruseDetection: false,
-                                googCpuUnderuseThreshold: 100,
-                                googHighStartBitrate: true,
-                                googVeryHighBitrate: true
-                            }).catch(e => console.log('Constraints:', e));
-
-                            // Configurar calidad visual
-                            if (videoTrack.getSettings) {
-                                const settings = videoTrack.getSettings();
-                                updateStats(settings);
-                            }
-                        }
-
-                        isBroadcasting = true;
-                        
-                        // Enviar a todos con máxima calidad
-                        connections.forEach(conn => {
-                            if (conn.open) {
-                                const call = peer.call(conn.peer, localStream, {
-                                    videoBandwidth: CONFIG.BITRATE,
-                                    audioBandwidth: 320000,
-                                    videoCodec: 'H264',
-                                    // Opciones de calidad
-                                    video: {
-                                        bitrate: CONFIG.BITRATE,
-                                        fps: CONFIG.FPS,
-                                        width: CONFIG.RESOLUTION.width,
-                                        height: CONFIG.RESOLUTION.height
-                                    }
-                                });
-                            }
-                        });
-
-                        // Actualizar UI
-                        document.getElementById('qualityBadge').innerHTML = '⚡ 4K ULTRA · 50 MBPS ⚡';
-                        document.getElementById('statBitrate').innerHTML = '50 Mbps';
-                        document.getElementById('statResolution').innerHTML = '4K';
-                        document.getElementById('statFPS').innerHTML = '60';
-                        
-                        addChatMessage('🎬 SISTEMA', 'Transmisión 4K ULTRA iniciada · 50 Mbps', false);
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Error en calidad 4K, usando calidad normal');
+                // Capturar stream (sin opciones complejas)
+                if (video.captureStream) {
+                    localStream = video.captureStream(30);
+                } else if (video.mozCaptureStream) {
+                    localStream = video.mozCaptureStream(30);
                 }
-            }, 1000);
+
+                if (localStream) {
+                    isBroadcasting = true;
+                    
+                    // Llamar a todos los conectados
+                    connections.forEach(conn => {
+                        if (conn.open) {
+                            peer.call(conn.peer, localStream);
+                        }
+                    });
+                    
+                    // Mostrar calidad
+                    addChatMessage('Sistema', '📡 Transmitiendo - 50 Mbps', false);
+                }
+            }, 500);
         };
     }
 
@@ -517,20 +326,24 @@
         updatePeerCount('add');
 
         conn.on('open', () => {
+            // Si estamos emitiendo, enviar stream
             if (localStream && isBroadcasting) {
-                const call = peer.call(conn.peer, localStream, {
-                    videoBandwidth: CONFIG.BITRATE,
-                    audioBandwidth: 320000,
-                    videoCodec: 'H264'
-                });
+                peer.call(conn.peer, localStream);
             }
         });
 
         conn.on('data', (data) => {
-            if (data.type === 'chat') addChatMessage(data.user, data.msg, false);
-            if (data.type === 'control') {
-                if (data.action === 'play') { video.play(); updatePlayButton('play'); }
-                if (data.action === 'pause') { video.pause(); updatePlayButton('pause'); }
+            if (data.type === 'chat') {
+                addChatMessage('Amigo', data.msg, false);
+            } else if (data.type === 'control') {
+                if (data.action === 'play') {
+                    video.play();
+                    document.getElementById('playPauseBtn').innerText = '⏸️';
+                }
+                if (data.action === 'pause') {
+                    video.pause();
+                    document.getElementById('playPauseBtn').innerText = '▶️';
+                }
             }
         });
 
@@ -548,36 +361,27 @@
         
         if (!video.srcObject && !video.src) return;
 
+        const overlay = document.getElementById('playOverlay');
+        const icon = document.getElementById('playIcon');
+
         if (video.paused) {
             video.play();
-            showPlayOverlay('▶️');
-            updatePlayButton('play');
+            icon.innerText = '▶️';
+            document.getElementById('playPauseBtn').innerText = '⏸️';
             connections.forEach(c => c.open && c.send({type: 'control', action: 'play'}));
         } else {
             video.pause();
-            showPlayOverlay('⏸️');
-            updatePlayButton('pause');
+            icon.innerText = '⏸️';
+            document.getElementById('playPauseBtn').innerText = '▶️';
             connections.forEach(c => c.open && c.send({type: 'control', action: 'pause'}));
         }
-    }
 
-    function showPlayOverlay(icon) {
-        const overlay = document.getElementById('playOverlay');
-        document.getElementById('playIcon').innerText = icon;
         overlay.classList.add('visible');
         
         clearTimeout(playTimeout);
         playTimeout = setTimeout(() => {
             overlay.classList.remove('visible');
         }, 5000);
-    }
-
-    function hidePlayOverlay() {
-        document.getElementById('playOverlay').classList.remove('visible');
-    }
-
-    function updatePlayButton(state) {
-        document.getElementById('playPauseBtn').innerText = state === 'play' ? '⏸️' : '▶️';
     }
 
     // ============================================
@@ -597,45 +401,11 @@
     // ORIENTACIÓN
     // ============================================
     function checkOrientation() {
-        const warning = document.getElementById('orientationWarning');
         if (window.orientation === 0 || window.orientation === 180) {
-            warning.classList.add('visible');
-            setTimeout(() => warning.classList.remove('visible'), 4000);
-        }
-    }
-
-    // ============================================
-    // ESTADÍSTICAS EN VIVO
-    // ============================================
-    function startStatsMonitoring() {
-        statsInterval = setInterval(() => {
-            if (video.videoWidth) {
-                document.getElementById('statResolution').innerHTML = 
-                    video.videoWidth + 'x' + video.videoHeight;
-            }
-            
-            // Calcular bitrate aproximado
-            if (video.webkitVideoDecodedByteCount) {
-                // Solo para Chrome
-            }
-        }, 1000);
-    }
-
-    function updateStatsFromStream(stream) {
-        const track = stream.getVideoTracks()[0];
-        if (track && track.getSettings) {
-            const settings = track.getSettings();
-            updateStats(settings);
-        }
-    }
-
-    function updateStats(settings) {
-        if (settings.width) {
-            document.getElementById('statResolution').innerHTML = 
-                settings.width + 'x' + (settings.height || 2160);
-        }
-        if (settings.frameRate) {
-            document.getElementById('statFPS').innerHTML = Math.round(settings.frameRate);
+            document.getElementById('orientationWarning').classList.add('visible');
+            setTimeout(() => {
+                document.getElementById('orientationWarning').classList.remove('visible');
+            }, 3000);
         }
     }
 
@@ -647,8 +417,12 @@
         const msg = input.value.trim();
         if (!msg) return;
 
-        addChatMessage('👤 TÚ', msg, true);
-        connections.forEach(c => c.open && c.send({type: 'chat', user: '👤 AMIGO', msg}));
+        addChatMessage('Tú', msg, true);
+        
+        connections.forEach(conn => {
+            if (conn.open) conn.send({type: 'chat', msg: msg});
+        });
+        
         input.value = '';
     }
 
@@ -661,17 +435,14 @@
     // ============================================
     // INTERFAZ
     // ============================================
-    function showModal(id) { document.getElementById(id + 'Modal').classList.add('active'); }
-    function hideModal(id) { document.getElementById(id + 'Modal').classList.remove('active'); }
+    function showPanel(id) { document.getElementById(id + 'Panel').classList.add('active'); }
+    function hidePanel(id) { document.getElementById(id + 'Panel').classList.remove('active'); }
     
     function copyLink() {
         const link = document.getElementById('inviteLink');
         link.select();
         document.execCommand('copy');
-        
-        const btn = event.target;
-        btn.innerText = '✅ COPIADO 4K!';
-        setTimeout(() => btn.innerText = '📋 COPIAR ENLACE 4K', 2000);
+        alert('¡Enlace copiado!');
     }
 
     function updatePeerCount(action) {
@@ -679,13 +450,8 @@
         let count = parseInt(el.innerText) || 0;
         if (action === 'add') count++;
         if (action === 'remove' && count > 0) count--;
-        el.innerHTML = count + ' 👥';
+        el.innerText = count + ' conectados';
     }
-
-    // Limpiar recursos
-    window.addEventListener('beforeunload', () => {
-        if (statsInterval) clearInterval(statsInterval);
-    });
 
     window.onload = init;
 </script>
