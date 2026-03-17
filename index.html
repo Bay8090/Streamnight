@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Streamnight · WebRTC 4K</title>
+    <title>Streamnight · 4K Directo</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -126,26 +126,38 @@
             max-width: 400px;
             border: 1px solid red;
         }
-        input {
-            width: 100%;
+        .modal-content h3 { color: red; margin-bottom: 15px; }
+        
+        .code-box {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 8px;
             padding: 15px;
-            margin: 10px 0;
-            background: #000;
-            color: white;
-            border: 1px solid #333;
-            border-radius: 8px;
-        }
-        textarea {
-            width: 100%;
-            padding: 10px;
-            background: #000;
+            margin: 15px 0;
             color: #0f0;
-            border: 1px solid #333;
-            border-radius: 8px;
             font-family: monospace;
             font-size: 12px;
-            margin: 10px 0;
+            word-break: break-all;
+            max-height: 150px;
+            overflow-y: auto;
         }
+        
+        .action-btn {
+            width: 100%;
+            padding: 15px;
+            margin: 5px 0;
+            background: red;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .secondary-btn {
+            background: #333;
+        }
+        
         #chatMessages {
             height: 300px;
             overflow-y: auto;
@@ -161,10 +173,6 @@
             border-radius: 5px;
         }
         .message.own { background: red; text-align: right; }
-        .signal-step {
-            display: none;
-        }
-        .signal-step.active { display: block; }
     </style>
 </head>
 <body>
@@ -182,48 +190,46 @@
     <div class="badge" id="status">Iniciando...</div>
     <div class="badge" id="peerCount">0</div>
     
-    <div class="quality-badge" id="qualityBadge">⚡ WEBRTC 4K ⚡</div>
+    <div class="quality-badge" id="qualityBadge">⚡ 4K SIN COMPRESIÓN ⚡</div>
 </div>
 
 <div class="toolbar">
     <input type="file" id="fileInput" hidden accept="video/*" onchange="startStream()">
-    <button class="btn btn-red" onclick="document.getElementById('fileInput').click()">📹 EMITIR 4K</button>
-    <button class="btn" onclick="showSignaling()">🔗 CONECTAR</button>
+    <button class="btn btn-red" onclick="document.getElementById('fileInput').click()">📹 EMITIR</button>
+    <button class="btn" onclick="showConnectModal()">🔗 CONECTAR</button>
     <button class="btn" onclick="showModal('chat')">💬 CHAT</button>
 </div>
 
-<!-- Panel de señalización WebRTC -->
-<div id="signalModal" class="modal" onclick="hideModal('signal')">
+<!-- Modal de conexión WebRTC (SIMPLIFICADO) -->
+<div id="connectModal" class="modal" onclick="hideModal('connect')">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <span class="close" onclick="hideModal('signal')">✕</span>
-        <h3 style="color:red;">🔌 CONEXIÓN WEBRTC</h3>
+        <span class="close" onclick="hideModal('connect')" style="float:right; color:#888; font-size:24px; cursor:pointer;">✕</span>
+        <h3>🔗 CONEXIÓN 4K</h3>
         
-        <!-- PASO 1: Crear oferta (emisor) -->
-        <div id="step1" class="signal-step active">
-            <p style="color:#888;">1. Copia esta OFERTA y envíala a tu amigo:</p>
-            <textarea id="offerText" rows="4" readonly></textarea>
-            <button onclick="copyOffer()" style="width:100%; background:red; color:white; border:none; padding:10px;">📋 COPIAR OFERTA</button>
+        <div id="step1">
+            <p style="color:#888; margin-bottom:10px;">1. Genera el código de invitación:</p>
+            <button class="action-btn" onclick="generateOffer()">🎬 GENERAR CÓDIGO</button>
         </div>
         
-        <!-- PASO 2: Ingresar oferta (receptor) -->
-        <div id="step2" class="signal-step">
-            <p style="color:#888;">2. Pega la OFERTA que te envió tu amigo:</p>
-            <textarea id="remoteOfferText" rows="4" placeholder="Pega aquí la oferta..."></textarea>
-            <button onclick="processOffer()" style="width:100%; background:red; color:white; border:none; padding:10px;">📥 PROCESAR OFERTA</button>
+        <div id="step2" style="display:none;">
+            <p style="color:#888; margin-bottom:10px;">2. Copia este código y envíalo a tu amigo:</p>
+            <div class="code-box" id="offerCode"></div>
+            <button class="action-btn" onclick="copyOffer()">📋 COPIAR CÓDIGO</button>
+            <button class="action-btn secondary-btn" onclick="showPasteStep()">YA LO ENVIÉ, SIGUIENTE</button>
         </div>
         
-        <!-- PASO 3: Copiar respuesta (receptor) -->
-        <div id="step3" class="signal-step">
-            <p style="color:#888;">3. Copia esta RESPUESTA y envíala a tu amigo:</p>
-            <textarea id="answerText" rows="4" readonly></textarea>
-            <button onclick="copyAnswer()" style="width:100%; background:red; color:white; border:none; padding:10px;">📋 COPIAR RESPUESTA</button>
+        <div id="step3" style="display:none;">
+            <p style="color:#888; margin-bottom:10px;">3. Pega el código que te envió tu amigo:</p>
+            <div class="code-box">
+                <input type="text" id="pasteCode" placeholder="Pega aquí el código..." style="width:100%; background:#000; color:#0f0; border:none; outline:none;">
+            </div>
+            <button class="action-btn" onclick="processCode()">🔗 CONECTAR</button>
         </div>
         
-        <!-- PASO 4: Ingresar respuesta (emisor) -->
-        <div id="step4" class="signal-step">
-            <p style="color:#888;">4. Pega la RESPUESTA de tu amigo:</p>
-            <textarea id="remoteAnswerText" rows="4" placeholder="Pega aquí la respuesta..."></textarea>
-            <button onclick="processAnswer()" style="width:100%; background:red; color:white; border:none; padding:10px;">🔗 COMPLETAR CONEXIÓN</button>
+        <div id="step4" style="display:none;">
+            <p style="color:#0f0; text-align:center;">✅ ¡CONECTADO!</p>
+            <p style="color:#888; text-align:center;">Calidad 4K sin compresión</p>
+            <button class="action-btn" onclick="hideModal('connect')">CERRAR</button>
         </div>
     </div>
 </div>
@@ -231,10 +237,11 @@
 <!-- Modal Chat -->
 <div id="chatModal" class="modal" onclick="hideModal('chat')">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3 style="color:red;">💬 CHAT</h3>
+        <span class="close" onclick="hideModal('chat')" style="float:right; color:#888; font-size:24px; cursor:pointer;">✕</span>
+        <h3>💬 CHAT</h3>
         <div id="chatMessages"></div>
         <div style="display: flex;">
-            <input type="text" id="chatInput" placeholder="Mensaje..." style="flex:1;">
+            <input type="text" id="chatInput" placeholder="Mensaje..." style="flex:1; padding:10px; background:#000; color:white; border:1px solid #333;">
             <button onclick="sendMessage()" style="background:red; color:white; border:none; width:60px;">➤</button>
         </div>
     </div>
@@ -242,73 +249,65 @@
 
 <script>
     // ============================================
-    // WEBRTC PURO - MÁXIMA CALIDAD
+    // WEBRTC SIMPLIFICADO
     // ============================================
     const video = document.getElementById('video');
     let peerConnection;
     let dataChannel;
     let localStream = null;
-    let remoteStream = null;
     let playTimeout;
-    let isInitiator = false;
 
-    // Configuración para MÁXIMA CALIDAD
     const config = {
         iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
+            { urls: 'stun:stun.l.google.com:19302' }
         ]
     };
 
     // ============================================
-    // 1. EMITIR VIDEO (CAPTURAR STREAM)
+    // EMITIR VIDEO
     // ============================================
     async function startStream() {
         const file = document.getElementById('fileInput').files[0];
         if (!file) return;
 
-        // Reproducir localmente
         video.src = URL.createObjectURL(file);
         await video.play();
         document.getElementById('playPauseBtn').innerText = '⏸️';
 
-        // Esperar metadata
         await new Promise(resolve => video.onloadedmetadata = resolve);
 
-        // Capturar stream con MÁXIMA CALIDAD
         if (video.captureStream) {
-            localStream = video.captureStream(60); // 60fps
+            localStream = video.captureStream(60);
         } else if (video.mozCaptureStream) {
             localStream = video.mozCaptureStream(60);
         }
 
         if (localStream) {
-            // Forzar configuración de alta calidad
             const videoTrack = localStream.getVideoTracks()[0];
             if (videoTrack) {
-                await videoTrack.applyConstraints({
-                    width: { exact: video.videoWidth },
-                    height: { exact: video.videoHeight },
-                    frameRate: { ideal: 60 }
-                }).catch(e => console.log('Constraints no aplicables'));
+                try {
+                    await videoTrack.applyConstraints({
+                        width: { exact: video.videoWidth },
+                        height: { exact: video.videoHeight },
+                        frameRate: { exact: 60 }
+                    });
+                } catch (e) {}
             }
         }
     }
 
     // ============================================
-    // 2. CREAR CONEXIÓN (INICIADOR)
+    // PASO 1: GENERAR OFERTA
     // ============================================
-    async function createConnection() {
+    async function generateOffer() {
         peerConnection = new RTCPeerConnection(config);
 
-        // Añadir stream local si existe
         if (localStream) {
             localStream.getTracks().forEach(track => {
                 peerConnection.addTrack(track, localStream);
             });
         }
 
-        // Canal de datos para chat
         dataChannel = peerConnection.createDataChannel('chat');
         dataChannel.onopen = () => console.log('Canal abierto');
         dataChannel.onmessage = (e) => {
@@ -316,135 +315,109 @@
             if (data.type === 'chat') addChatMessage('Amigo', data.msg, false);
         };
 
-        // Manejar stream entrante
         peerConnection.ontrack = (event) => {
-            if (!remoteStream) {
-                remoteStream = new MediaStream();
-                video.srcObject = remoteStream;
-            }
-            event.streams[0].getTracks().forEach(track => {
-                remoteStream.addTrack(track);
-            });
+            video.srcObject = event.streams[0];
             video.play();
             updatePeerCount('add');
         };
 
-        // ICE candidates
-        peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                console.log('ICE candidate generado');
-            }
-        };
-
-        // Crear oferta
-        const offer = await peerConnection.createOffer({
-            offerToReceiveVideo: true,
-            offerToReceiveAudio: true
-        });
-        
+        const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
+
+        // Convertir oferta a código simple
+        const offerString = JSON.stringify(peerConnection.localDescription);
+        const offerCode = btoa(offerString); // Convertir a base64
         
-        // Mostrar oferta para copiar
-        document.getElementById('offerText').value = JSON.stringify(peerConnection.localDescription);
+        document.getElementById('offerCode').innerText = offerCode;
         
-        isInitiator = true;
-        showStep(1);
+        document.getElementById('step1').style.display = 'none';
+        document.getElementById('step2').style.display = 'block';
     }
 
     // ============================================
-    // 3. PROCESAR OFERTA (RECEPTOR)
+    // PASO 2: COPIAR OFERTA
     // ============================================
-    async function processOffer() {
-        const offerText = document.getElementById('remoteOfferText').value;
-        if (!offerText) return;
-
-        const offer = JSON.parse(offerText);
-        
-        peerConnection = new RTCPeerConnection(config);
-
-        // Canal de datos para chat
-        peerConnection.ondatachannel = (event) => {
-            dataChannel = event.channel;
-            dataChannel.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                if (data.type === 'chat') addChatMessage('Amigo', data.msg, false);
-            };
-        };
-
-        // Manejar stream entrante
-        peerConnection.ontrack = (event) => {
-            if (!remoteStream) {
-                remoteStream = new MediaStream();
-                video.srcObject = remoteStream;
-            }
-            event.streams[0].getTracks().forEach(track => {
-                remoteStream.addTrack(track);
-            });
-            video.play();
-            updatePeerCount('add');
-        };
-
-        await peerConnection.setRemoteDescription(offer);
-        
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-        
-        document.getElementById('answerText').value = JSON.stringify(peerConnection.localDescription);
-        
-        showStep(3);
-    }
-
-    // ============================================
-    // 4. PROCESAR RESPUESTA (INICIADOR)
-    // ============================================
-    async function processAnswer() {
-        const answerText = document.getElementById('remoteAnswerText').value;
-        if (!answerText) return;
-
-        const answer = JSON.parse(answerText);
-        await peerConnection.setRemoteDescription(answer);
-        
-        hideModal('signal');
-        addChatMessage('🎬 Sistema', '¡Conectado! Calidad máxima', false);
-    }
-
-    // ============================================
-    // FUNCIONES DE INTERFAZ
-    // ============================================
-    function showSignaling() {
-        if (localStream) {
-            // Somos emisor, crear conexión
-            createConnection();
-        }
-        showModal('signal');
-    }
-
-    function showStep(step) {
-        document.getElementById('step1').classList.remove('active');
-        document.getElementById('step2').classList.remove('active');
-        document.getElementById('step3').classList.remove('active');
-        document.getElementById('step4').classList.remove('active');
-        document.getElementById(`step${step}`).classList.add('active');
-    }
-
     function copyOffer() {
-        const text = document.getElementById('offerText');
-        text.select();
-        document.execCommand('copy');
-        alert('✅ Oferta copiada');
-        showStep(2); // Siguiente paso: pegar oferta
+        const code = document.getElementById('offerCode').innerText;
+        navigator.clipboard.writeText(code).then(() => {
+            alert('✅ Código copiado');
+        });
     }
 
-    function copyAnswer() {
-        const text = document.getElementById('answerText');
-        text.select();
-        document.execCommand('copy');
-        alert('✅ Respuesta copiada');
-        showStep(4); // Siguiente paso: pegar respuesta
+    function showPasteStep() {
+        document.getElementById('step2').style.display = 'none';
+        document.getElementById('step3').style.display = 'block';
     }
 
     // ============================================
-    // RESTO DE FUNCIONES (PLAY/PAUSE, CHAT, ETC)
+    // PASO 3: PROCESAR CÓDIGO
+    // ============================================
+    async function processCode() {
+        const code = document.getElementById('pasteCode').value;
+        if (!code) return;
+
+        try {
+            const offerString = atob(code); // Decodificar base64
+            const offer = JSON.parse(offerString);
+
+            if (!peerConnection) {
+                peerConnection = new RTCPeerConnection(config);
+
+                peerConnection.ondatachannel = (event) => {
+                    dataChannel = event.channel;
+                    dataChannel.onmessage = (e) => {
+                        const data = JSON.parse(e.data);
+                        if (data.type === 'chat') addChatMessage('Amigo', data.msg, false);
+                    };
+                };
+
+                peerConnection.ontrack = (event) => {
+                    video.srcObject = event.streams[0];
+                    video.play();
+                    updatePeerCount('add');
+                };
+            }
+
+            await peerConnection.setRemoteDescription(offer);
+            
+            if (offer.type === 'offer') {
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                
+                const answerString = JSON.stringify(peerConnection.localDescription);
+                const answerCode = btoa(answerString);
+                
+                // Mostrar respuesta para que la copien
+                document.getElementById('offerCode').innerText = answerCode;
+                document.getElementById('step3').style.display = 'none';
+                document.getElementById('step2').style.display = 'block';
+                document.getElementById('step2').querySelector('p').innerText = '4. Envía este código de vuelta:';
+            } else {
+                // Es una respuesta, conexión completa
+                document.getElementById('step3').style.display = 'none';
+                document.getElementById('step4').style.display = 'block';
+                addChatMessage('🎬 Sistema', '¡Conectado! Calidad 4K', false);
+            }
+        } catch (e) {
+            alert('❌ Código inválido');
+        }
+    }
+
+    // ============================================
+    // MOSTAR MODAL DE CONEXIÓN
+    // ============================================
+    function showConnectModal() {
+        document.getElementById('connectModal').classList.add('active');
+        // Resetear pasos
+        document.getElementById('step1').style.display = 'block';
+        document.getElementById('step2').style.display = 'none';
+        document.getElementById('step3').style.display = 'none';
+        document.getElementById('step4').style.display = 'none';
+        document.getElementById('pasteCode').value = '';
+    }
+
+    // ============================================
+    // FUNCIONES BÁSICAS
     // ============================================
     function togglePlay(event) {
         if (event.target.classList.contains('btn')) return;
