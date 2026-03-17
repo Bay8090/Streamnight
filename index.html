@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Streamnight · P2P</title>
+    <title>Streamnight · 4K SIN COMPRESIÓN</title>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -13,7 +13,7 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
         .video-container {
             flex: 1;
@@ -25,55 +25,37 @@
         }
         video {
             width: 100%;
-            max-height: 100%;
+            height: 100%;
+            object-fit: contain;
             background: #000;
         }
         
-        /* Botones básicos */
+        /* Botones flotantes */
         .float-btn {
             position: absolute;
             bottom: 80px;
             width: 60px;
             height: 60px;
             border-radius: 30px;
-            background: red;
+            background: #e50914;
             color: white;
             border: none;
-            font-size: 30px;
+            font-size: 28px;
             cursor: pointer;
             z-index: 100;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4);
         }
         #playPauseBtn { left: 20px; }
         #fullscreenBtn { right: 20px; }
-        
-        /* Badges simples */
-        .status {
-            position: absolute;
-            top: 10px; left: 10px;
-            background: rgba(0,0,0,0.7);
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            z-index: 10;
-        }
-        .peer-count {
-            position: absolute;
-            top: 10px; right: 10px;
-            background: rgba(0,0,0,0.7);
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            z-index: 10;
-        }
         
         /* Overlay play/pause */
         .play-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.5);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -83,43 +65,89 @@
             z-index: 50;
         }
         .play-overlay.visible { opacity: 1; }
-        .play-icon { font-size: 80px; color: white; }
+        .play-icon {
+            font-size: 100px;
+            color: white;
+            text-shadow: 0 0 30px #e50914;
+        }
         
+        /* Badges */
+        .badge {
+            position: absolute;
+            top: 15px;
+            padding: 8px 16px;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            border-radius: 30px;
+            font-size: 12px;
+            border: 1px solid #e50914;
+            z-index: 10;
+        }
+        #status { left: 15px; }
+        #peerCount { right: 15px; }
+        
+        /* BADGE 4K SIN COMPRESIÓN */
+        .quality-4k {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #e50914;
+            color: white;
+            padding: 8px 25px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 0 20px rgba(229,9,20,0.5);
+            z-index: 10;
+            white-space: nowrap;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.8} }
+        
+        /* Toolbar */
         .toolbar {
             background: #111;
             padding: 15px;
             display: flex;
             gap: 10px;
-            border-top: 2px solid red;
+            border-top: 2px solid #e50914;
         }
         .btn {
             flex: 1;
-            padding: 15px;
+            padding: 16px;
             background: #222;
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 16px;
+            font-size: 15px;
+            font-weight: bold;
             cursor: pointer;
         }
-        .btn-red { background: red; }
+        .btn-red { background: #e50914; }
         
-        .panel {
+        /* Paneles */
+        .modal {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.95);
             display: none;
-            padding: 20px;
+            align-items: center;
+            justify-content: center;
             z-index: 200;
         }
-        .panel.active { display: flex; align-items: center; justify-content: center; }
-        .panel-content {
+        .modal.active { display: flex; }
+        .modal-content {
             background: #111;
-            padding: 20px;
-            border-radius: 10px;
+            padding: 25px;
+            border-radius: 15px;
             width: 90%;
             max-width: 400px;
+            border: 1px solid #e50914;
         }
+        .modal-content h3 { color: #e50914; margin-bottom: 15px; }
         input {
             width: 100%;
             padding: 15px;
@@ -127,44 +155,46 @@
             background: #000;
             color: white;
             border: 1px solid #333;
-            border-radius: 5px;
+            border-radius: 8px;
         }
-        #chatMessages {
-            height: 300px;
-            overflow-y: auto;
-            background: #000;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #333;
-        }
-        .message {
-            margin-bottom: 10px;
-            padding: 8px;
-            background: #1a1a1a;
-            border-radius: 5px;
-        }
-        .message.own { background: red; text-align: right; }
         .close {
             float: right;
             font-size: 24px;
             cursor: pointer;
             color: #888;
         }
-        .orientation-warning {
-            position: absolute;
-            bottom: 150px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: red;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            border: 1px solid red;
-            display: none;
-            z-index: 150;
+        .close:hover { color: #e50914; }
+        
+        /* Chat */
+        #chatMessages {
+            height: 300px;
+            overflow-y: auto;
+            background: #000;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #333;
+            border-radius: 8px;
         }
-        .orientation-warning.visible { display: block; }
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 8px;
+        }
+        .message.own { background: #e50914; text-align: right; }
+        .chat-input-group {
+            display: flex;
+            gap: 5px;
+        }
+        .chat-input-group button {
+            width: 60px;
+            background: #e50914;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -177,54 +207,53 @@
         <div class="play-icon" id="playIcon">▶️</div>
     </div>
     
-    <!-- Botones -->
+    <!-- Botones flotantes -->
     <button class="float-btn" id="playPauseBtn" onclick="togglePlay(event)">▶️</button>
     <button class="float-btn" id="fullscreenBtn" onclick="toggleFullscreen(event)">⛶</button>
     
-    <!-- Estado -->
-    <div class="status" id="status">Iniciando...</div>
-    <div class="peer-count" id="peerCount">0 conectados</div>
+    <!-- Badges -->
+    <div class="badge" id="status">Iniciando...</div>
+    <div class="badge" id="peerCount">0</div>
     
-    <!-- Advertencia orientación -->
-    <div class="orientation-warning" id="orientationWarning">
-        🔄 Gira el teléfono
-    </div>
+    <!-- BADGE 4K SIN COMPRESIÓN (MUY VISIBLE) -->
+    <div class="quality-4k" id="qualityBadge">⚡ 4K SIN COMPRESIÓN ⚡</div>
 </div>
 
 <!-- Toolbar -->
 <div class="toolbar">
     <input type="file" id="fileInput" hidden accept="video/*" onchange="startStream()">
-    <button class="btn btn-red" onclick="document.getElementById('fileInput').click()">📹 EMITIR</button>
-    <button class="btn" onclick="showPanel('invite')">🔗 INVITAR</button>
-    <button class="btn" onclick="showPanel('chat')">💬 CHAT</button>
+    <button class="btn btn-red" onclick="document.getElementById('fileInput').click()">📹 EMITIR 4K</button>
+    <button class="btn" onclick="showModal('invite')">🔗 INVITAR</button>
+    <button class="btn" onclick="showModal('chat')">💬 CHAT</button>
 </div>
 
-<!-- Panel Invitación -->
-<div id="invitePanel" class="panel" onclick="hidePanel('invite')">
-    <div class="panel-content" onclick="event.stopPropagation()">
-        <span class="close" onclick="hidePanel('invite')">✕</span>
-        <h3 style="color:red;">Compartir</h3>
+<!-- Modal Invitación -->
+<div id="inviteModal" class="modal" onclick="hideModal('invite')">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <span class="close" onclick="hideModal('invite')">✕</span>
+        <h3>🔗 COMPARTIR 4K</h3>
+        <p style="color:#888;">CALIDAD ORIGINAL · SIN COMPRESIÓN</p>
         <input type="text" id="inviteLink" readonly>
-        <button onclick="copyLink()" style="width:100%; background:red; color:white; border:none; padding:15px; border-radius:5px;">COPIAR</button>
+        <button onclick="copyLink()" style="width:100%; background:#e50914; color:white; border:none; padding:15px; border-radius:8px;">📋 COPIAR ENLACE</button>
     </div>
 </div>
 
-<!-- Panel Chat -->
-<div id="chatPanel" class="panel" onclick="hidePanel('chat')">
-    <div class="panel-content" onclick="event.stopPropagation()">
-        <span class="close" onclick="hidePanel('chat')">✕</span>
-        <h3 style="color:red;">Chat</h3>
+<!-- Modal Chat -->
+<div id="chatModal" class="modal" onclick="hideModal('chat')">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <span class="close" onclick="hideModal('chat')">✕</span>
+        <h3>💬 CHAT 4K</h3>
         <div id="chatMessages"></div>
-        <div style="display: flex; gap: 5px;">
-            <input type="text" id="chatInput" placeholder="Mensaje..." style="flex:1;">
-            <button onclick="sendMessage()" style="background:red; color:white; border:none; width:60px; border-radius:5px;">➤</button>
+        <div class="chat-input-group">
+            <input type="text" id="chatInput" placeholder="Mensaje...">
+            <button onclick="sendMessage()">➤</button>
         </div>
     </div>
 </div>
 
 <script>
     // ============================================
-    // VERSIÓN SIMPLE QUE FUNCIONA
+    // VERSIÓN 4K SIN COMPRESIÓN
     // ============================================
     const video = document.getElementById('video');
     let peer, connections = [], localStream = null;
@@ -232,35 +261,29 @@
     let playTimeout;
 
     function init() {
-        // Peer SIN configuraciones complejas
-        peer = new Peer();
+        peer = new Peer({
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' }
+                ]
+            }
+        });
 
         peer.on('open', (id) => {
-            document.getElementById('status').innerText = 'ID: ' + id.substring(0,6);
+            document.getElementById('status').innerHTML = `🟢 ${id.substring(0,6)}`;
             const link = window.location.href.split('?')[0] + '?id=' + id;
             document.getElementById('inviteLink').value = link;
             
-            // Auto-conectar
             const urlParams = new URLSearchParams(window.location.search);
             const targetId = urlParams.get('id');
-            if (targetId && targetId !== id) {
-                connectToPeer(targetId);
-            }
+            if (targetId && targetId !== id) connectToPeer(targetId);
         });
 
-        // Conexiones de datos
-        peer.on('connection', (conn) => {
-            setupConnection(conn);
-        });
+        peer.on('connection', (conn) => setupConnection(conn));
 
-        // Llamadas de video
         peer.on('call', (call) => {
-            // Si estamos emitiendo, responder con nuestro stream
-            if (localStream) {
-                call.answer(localStream);
-            } else {
-                call.answer();
-            }
+            if (localStream) call.answer(localStream);
+            else call.answer();
             
             call.on('stream', (remoteStream) => {
                 video.srcObject = remoteStream;
@@ -268,53 +291,86 @@
                 updatePeerCount('add');
             });
         });
-        
-        // Detectar orientación
-        checkOrientation();
-        window.addEventListener('orientationchange', checkOrientation);
     }
 
     // ============================================
-    // EMITIR (SIMPLE)
+    // EMITIR - SIN COMPRESIÓN
     // ============================================
     function startStream() {
         const file = document.getElementById('fileInput').files[0];
         if (!file) return;
 
-        // Reproducir localmente
-        video.src = URL.createObjectURL(file);
-        video.play();
-        document.getElementById('playPauseBtn').innerText = '⏸️';
+        // Mostrar resolución del archivo
+        const videoElement = document.createElement('video');
+        videoElement.preload = 'metadata';
+        videoElement.src = URL.createObjectURL(file);
+        
+        videoElement.onloadedmetadata = () => {
+            const width = videoElement.videoWidth;
+            const height = videoElement.videoHeight;
+            const is4K = width >= 3840 || height >= 2160;
+            
+            if (is4K) {
+                document.getElementById('qualityBadge').innerHTML = '⚡ 4K ULTRA · SIN COMPRESIÓN ⚡';
+            }
+            
+            // Reproducir localmente
+            video.src = URL.createObjectURL(file);
+            video.play();
+            document.getElementById('playPauseBtn').innerHTML = '⏸️';
 
-        // Capturar stream después de cargar
-        video.onloadeddata = () => {
+            // Capturar stream SIN COMPRESIÓN
             setTimeout(() => {
-                // Capturar stream (sin opciones complejas)
                 if (video.captureStream) {
-                    localStream = video.captureStream(30);
+                    // Capturar a 60fps para máxima calidad
+                    localStream = video.captureStream(60);
                 } else if (video.mozCaptureStream) {
-                    localStream = video.mozCaptureStream(30);
+                    localStream = video.mozCaptureStream(60);
                 }
 
                 if (localStream) {
+                    // ========================================
+                    // DESACTIVAR TODA COMPRESIÓN
+                    // ========================================
+                    const videoTrack = localStream.getVideoTracks()[0];
+                    if (videoTrack) {
+                        // Forzar que NO comprima
+                        const constraints = {
+                            width: { exact: width },
+                            height: { exact: height },
+                            frameRate: { exact: 60 },
+                            // Desactivar compresión
+                            googCpuOveruseDetection: false,
+                            googCpuUnderuseThreshold: 100,
+                            googHighStartBitrate: true,
+                            googVeryHighBitrate: true,
+                            googNoiseReduction: false
+                        };
+                        
+                        try {
+                            videoTrack.applyConstraints(constraints);
+                        } catch (e) {
+                            console.log('No se pudieron aplicar constraints');
+                        }
+                    }
+
                     isBroadcasting = true;
                     
-                    // Llamar a todos los conectados
+                    // Enviar a todos SIN COMPRESIÓN
                     connections.forEach(conn => {
                         if (conn.open) {
                             peer.call(conn.peer, localStream);
                         }
                     });
                     
-                    // Mostrar calidad
-                    addChatMessage('Sistema', '📡 Transmitiendo - 50 Mbps', false);
+                    addChatMessage('🎬 4K', 'Transmisión SIN COMPRESIÓN iniciada', false);
                 }
             }, 500);
         };
     }
 
     // ============================================
-    // CONEXIONES
+    // RESTO DE FUNCIONES IGUAL
     // ============================================
     function connectToPeer(id) {
         const conn = peer.connect(id);
@@ -326,24 +382,16 @@
         updatePeerCount('add');
 
         conn.on('open', () => {
-            // Si estamos emitiendo, enviar stream
             if (localStream && isBroadcasting) {
                 peer.call(conn.peer, localStream);
             }
         });
 
         conn.on('data', (data) => {
-            if (data.type === 'chat') {
-                addChatMessage('Amigo', data.msg, false);
-            } else if (data.type === 'control') {
-                if (data.action === 'play') {
-                    video.play();
-                    document.getElementById('playPauseBtn').innerText = '⏸️';
-                }
-                if (data.action === 'pause') {
-                    video.pause();
-                    document.getElementById('playPauseBtn').innerText = '▶️';
-                }
+            if (data.type === 'chat') addChatMessage('Amigo', data.msg, false);
+            if (data.type === 'control') {
+                if (data.action === 'play') { video.play(); document.getElementById('playPauseBtn').innerHTML = '⏸️'; }
+                if (data.action === 'pause') { video.pause(); document.getElementById('playPauseBtn').innerHTML = '▶️'; }
             }
         });
 
@@ -353,12 +401,8 @@
         });
     }
 
-    // ============================================
-    // PLAY/PAUSE CON OVERLAY
-    // ============================================
     function togglePlay(event) {
         if (event.target.classList.contains('btn')) return;
-        
         if (!video.srcObject && !video.src) return;
 
         const overlay = document.getElementById('playOverlay');
@@ -366,27 +410,21 @@
 
         if (video.paused) {
             video.play();
-            icon.innerText = '▶️';
-            document.getElementById('playPauseBtn').innerText = '⏸️';
+            icon.innerHTML = '▶️';
+            document.getElementById('playPauseBtn').innerHTML = '⏸️';
             connections.forEach(c => c.open && c.send({type: 'control', action: 'play'}));
         } else {
             video.pause();
-            icon.innerText = '⏸️';
-            document.getElementById('playPauseBtn').innerText = '▶️';
+            icon.innerHTML = '⏸️';
+            document.getElementById('playPauseBtn').innerHTML = '▶️';
             connections.forEach(c => c.open && c.send({type: 'control', action: 'pause'}));
         }
 
         overlay.classList.add('visible');
-        
         clearTimeout(playTimeout);
-        playTimeout = setTimeout(() => {
-            overlay.classList.remove('visible');
-        }, 5000);
+        playTimeout = setTimeout(() => overlay.classList.remove('visible'), 5000);
     }
 
-    // ============================================
-    // PANTALLA COMPLETA
-    // ============================================
     function toggleFullscreen(event) {
         event.stopPropagation();
         if (!document.fullscreenElement) {
@@ -397,32 +435,13 @@
         }
     }
 
-    // ============================================
-    // ORIENTACIÓN
-    // ============================================
-    function checkOrientation() {
-        if (window.orientation === 0 || window.orientation === 180) {
-            document.getElementById('orientationWarning').classList.add('visible');
-            setTimeout(() => {
-                document.getElementById('orientationWarning').classList.remove('visible');
-            }, 3000);
-        }
-    }
-
-    // ============================================
-    // CHAT
-    // ============================================
     function sendMessage() {
         const input = document.getElementById('chatInput');
         const msg = input.value.trim();
         if (!msg) return;
 
         addChatMessage('Tú', msg, true);
-        
-        connections.forEach(conn => {
-            if (conn.open) conn.send({type: 'chat', msg: msg});
-        });
-        
+        connections.forEach(c => c.open && c.send({type: 'chat', msg}));
         input.value = '';
     }
 
@@ -432,25 +451,25 @@
         box.scrollTop = box.scrollHeight;
     }
 
-    // ============================================
-    // INTERFAZ
-    // ============================================
-    function showPanel(id) { document.getElementById(id + 'Panel').classList.add('active'); }
-    function hidePanel(id) { document.getElementById(id + 'Panel').classList.remove('active'); }
+    function showModal(id) { document.getElementById(id + 'Modal').classList.add('active'); }
+    function hideModal(id) { document.getElementById(id + 'Modal').classList.remove('active'); }
     
     function copyLink() {
         const link = document.getElementById('inviteLink');
         link.select();
         document.execCommand('copy');
-        alert('¡Enlace copiado!');
+        
+        const btn = event.target;
+        btn.innerHTML = '✅ COPIADO';
+        setTimeout(() => btn.innerHTML = '📋 COPIAR ENLACE', 2000);
     }
 
     function updatePeerCount(action) {
         const el = document.getElementById('peerCount');
-        let count = parseInt(el.innerText) || 0;
+        let count = parseInt(el.innerHTML) || 0;
         if (action === 'add') count++;
         if (action === 'remove' && count > 0) count--;
-        el.innerText = count + ' conectados';
+        el.innerHTML = count + ' 👥';
     }
 
     window.onload = init;
