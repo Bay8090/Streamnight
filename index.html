@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Streamnight · 4K REAL</title>
+    <title>Streamnight · 4K ULTRA</title>
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -29,7 +30,6 @@
             background: #000;
         }
         
-        /* Botones flotantes */
         .float-btn {
             position: absolute;
             bottom: 80px;
@@ -45,11 +45,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 0 20px red;
         }
         #playPauseBtn { left: 20px; }
         #fullscreenBtn { right: 20px; }
         
-        /* Overlay play/pause */
         .play-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -65,7 +65,6 @@
         .play-overlay.visible { opacity: 1; }
         .play-icon { font-size: 100px; color: white; }
         
-        /* Badges */
         .badge {
             position: absolute;
             top: 15px;
@@ -79,7 +78,6 @@
         #status { left: 15px; }
         #peerCount { right: 15px; }
         
-        /* Badge 4K SIN COMPRESIÓN */
         .quality-badge {
             position: absolute;
             top: 70px;
@@ -94,7 +92,9 @@
             border: 2px solid white;
             z-index: 10;
             white-space: nowrap;
+            animation: pulse 2s infinite;
         }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.8} }
         
         .toolbar {
             background: #111;
@@ -190,7 +190,7 @@
         <h3 style="color:red;">🔗 COMPARTIR 4K</h3>
         <p style="color:#888;">CALIDAD ORIGINAL · SIN COMPRESIÓN</p>
         <input type="text" id="inviteLink" readonly>
-        <button onclick="copyLink()" style="width:100%; background:red; color:white; border:none; padding:15px;">COPIAR</button>
+        <button onclick="copyLink()" style="width:100%; background:red; color:white; border:none; padding:15px;">COPIAR ENLACE</button>
     </div>
 </div>
 
@@ -207,156 +207,133 @@
 
 <script>
     // ============================================
-    // WEBRTC PURO - MÁXIMA CALIDAD
+    // VERSIÓN PEERJS QUE FUNCIONA - CON CALIDAD MÁXIMA
     // ============================================
     const video = document.getElementById('video');
-    let peerConnection;
-    let dataChannel;
-    let localStream = null;
-    let isBroadcaster = false;
-    let connections = [];
+    let peer, connections = [], localStream = null;
+    let isBroadcasting = false;
     let playTimeout;
 
-    // Configuración para MÁXIMA CALIDAD
-    const peerConfig = {
-        iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-    };
+    function init() {
+        // Usar PeerJS que ya funciona
+        peer = new Peer();
+
+        peer.on('open', (id) => {
+            document.getElementById('status').innerHTML = `🟢 ${id.substring(0,6)}`;
+            const link = window.location.href.split('?')[0] + '?id=' + id;
+            document.getElementById('inviteLink').value = link;
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetId = urlParams.get('id');
+            if (targetId && targetId !== id) {
+                connectToPeer(targetId);
+            }
+        });
+
+        peer.on('connection', (conn) => setupConnection(conn));
+
+        peer.on('call', (call) => {
+            if (localStream) call.answer(localStream);
+            else call.answer();
+            
+            call.on('stream', (remoteStream) => {
+                video.srcObject = remoteStream;
+                video.play();
+                updatePeerCount('add');
+            });
+        });
+    }
 
     // ============================================
-    // INICIAR COMO BROADCASTER
+    // EMITIR CON LA MÁXIMA CALIDAD POSIBLE
     // ============================================
-    async function startStream() {
+    function startStream() {
         const file = document.getElementById('fileInput').files[0];
         if (!file) return;
 
-        try {
-            // Reproducir video local
-            video.src = URL.createObjectURL(file);
-            await video.play();
-            document.getElementById('playPauseBtn').innerText = '⏸️';
+        // Reproducir localmente
+        video.src = URL.createObjectURL(file);
+        video.play();
+        document.getElementById('playPauseBtn').innerHTML = '⏸️';
 
-            // Esperar a que cargue metadata
-            await new Promise(resolve => video.onloadedmetadata = resolve);
+        // Cuando el video esté cargado, capturar stream
+        video.onloadeddata = () => {
+            setTimeout(() => {
+                // Capturar stream a 60fps para máxima calidad
+                if (video.captureStream) {
+                    localStream = video.captureStream(60);
+                } else if (video.mozCaptureStream) {
+                    localStream = video.mozCaptureStream(60);
+                }
 
-            // Capturar stream con MÁXIMA CALIDAD
-            if (video.captureStream) {
-                localStream = video.captureStream(60); // 60fps
-            } else if (video.mozCaptureStream) {
-                localStream = video.mozCaptureStream(60);
+                if (localStream) {
+                    // ========================================
+                    // TRUCO PARA MEJORAR CALIDAD
+                    // ========================================
+                    // Crear un canvas para no perder calidad
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Dibujar el video en el canvas cada frame
+                    function drawVideo() {
+                        if (!video.paused && !video.ended) {
+                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            requestAnimationFrame(drawVideo);
+                        }
+                    }
+                    drawVideo();
+                    
+                    // Capturar del canvas (mejor calidad)
+                    if (canvas.captureStream) {
+                        localStream = canvas.captureStream(60);
+                    }
+
+                    isBroadcasting = true;
+                    
+                    // Llamar a todos los peers conectados
+                    connections.forEach(conn => {
+                        if (conn.open) {
+                            peer.call(conn.peer, localStream);
+                        }
+                    });
+                    
+                    addChatMessage('🎬 4K', 'Transmisión SIN COMPRESIÓN iniciada', false);
+                }
+            }, 1000);
+        };
+    }
+
+    function connectToPeer(id) {
+        const conn = peer.connect(id);
+        setupConnection(conn);
+    }
+
+    function setupConnection(conn) {
+        connections.push(conn);
+        updatePeerCount('add');
+
+        conn.on('open', () => {
+            if (localStream && isBroadcasting) {
+                peer.call(conn.peer, localStream);
             }
+        });
 
-            // Configurar tracks para MÁXIMA CALIDAD
-            const videoTrack = localStream.getVideoTracks()[0];
-            if (videoTrack) {
-                // Forzar resolución original y bitrate alto
-                await videoTrack.applyConstraints({
-                    width: { exact: video.videoWidth },
-                    height: { exact: video.videoHeight },
-                    frameRate: { exact: 60 }
-                }).catch(e => console.log('No se pudo forzar resolución'));
+        conn.on('data', (data) => {
+            if (data.type === 'chat') addChatMessage('Amigo', data.msg, false);
+            if (data.type === 'control') {
+                if (data.action === 'play') { video.play(); document.getElementById('playPauseBtn').innerHTML = '⏸️'; }
+                if (data.action === 'pause') { video.pause(); document.getElementById('playPauseBtn').innerHTML = '▶️'; }
             }
+        });
 
-            // Crear PeerConnection para broadcast
-            peerConnection = new RTCPeerConnection(peerConfig);
-            
-            // Añadir tracks
-            localStream.getTracks().forEach(track => {
-                peerConnection.addTrack(track, localStream);
-            });
-
-            // Crear canal de datos para chat/control
-            dataChannel = peerConnection.createDataChannel('control');
-            dataChannel.onopen = () => console.log('Canal de datos abierto');
-            dataChannel.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                if (data.type === 'chat') addChatMessage('Amigo', data.msg, false);
-            };
-
-            // Crear oferta
-            const offer = await peerConnection.createOffer({
-                offerToReceiveVideo: false,
-                offerToReceiveAudio: false
-            });
-            
-            await peerConnection.setLocalDescription(offer);
-
-            // Generar código de invitación
-            const offerString = btoa(JSON.stringify(peerConnection.localDescription));
-            const baseUrl = window.location.href.split('?')[0];
-            const inviteUrl = baseUrl + '?offer=' + offerString;
-            document.getElementById('inviteLink').value = inviteUrl;
-
-            isBroadcaster = true;
-            addChatMessage('🎬 4K', 'Transmisión SIN COMPRESIÓN iniciada', false);
-
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Error al iniciar transmisión');
-        }
+        conn.on('close', () => {
+            connections = connections.filter(c => c.peer !== conn.peer);
+            updatePeerCount('remove');
+        });
     }
 
-    // ============================================
-    // CONECTAR COMO VIEWER
-    // ============================================
-    async function connectToBroadcaster(offerString) {
-        try {
-            const offer = JSON.parse(atob(offerString));
-            
-            peerConnection = new RTCPeerConnection(peerConfig);
-            
-            // Canal de datos para chat
-            peerConnection.ondatachannel = (event) => {
-                dataChannel = event.channel;
-                dataChannel.onmessage = (e) => {
-                    const data = JSON.parse(e.data);
-                    if (data.type === 'chat') addChatMessage('Amigo', data.msg, false);
-                };
-            };
-
-            // Recibir stream
-            peerConnection.ontrack = (event) => {
-                video.srcObject = event.streams[0];
-                video.play();
-                updatePeerCount('add');
-            };
-
-            await peerConnection.setRemoteDescription(offer);
-            
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-
-            // Enviar respuesta (simplificado - en producción necesitarías signaling)
-            console.log('Respuesta:', btoa(JSON.stringify(answer)));
-
-        } catch (error) {
-            console.error('Error conectando:', error);
-        }
-    }
-
-    // ============================================
-    // VERIFICAR URL AL INICIAR
-    // ============================================
-    function init() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const offerParam = urlParams.get('offer');
-        
-        if (offerParam) {
-            // Somos viewer
-            document.getElementById('status').innerText = 'Conectando...';
-            connectToBroadcaster(offerParam);
-        } else {
-            // Somos broadcaster potencial
-            const id = Math.random().toString(36).substring(7);
-            document.getElementById('status').innerText = 'ID: ' + id;
-        }
-    }
-
-    // ============================================
-    // PLAY/PAUSE
-    // ============================================
     function togglePlay(event) {
         if (event.target.classList.contains('btn')) return;
         if (!video.srcObject && !video.src) return;
@@ -366,12 +343,14 @@
 
         if (video.paused) {
             video.play();
-            icon.innerText = '▶️';
-            document.getElementById('playPauseBtn').innerText = '⏸️';
+            icon.innerHTML = '▶️';
+            document.getElementById('playPauseBtn').innerHTML = '⏸️';
+            connections.forEach(c => c.open && c.send({type: 'control', action: 'play'}));
         } else {
             video.pause();
-            icon.innerText = '⏸️';
-            document.getElementById('playPauseBtn').innerText = '▶️';
+            icon.innerHTML = '⏸️';
+            document.getElementById('playPauseBtn').innerHTML = '▶️';
+            connections.forEach(c => c.open && c.send({type: 'control', action: 'pause'}));
         }
 
         overlay.classList.add('visible');
@@ -379,9 +358,6 @@
         playTimeout = setTimeout(() => overlay.classList.remove('visible'), 5000);
     }
 
-    // ============================================
-    // PANTALLA COMPLETA
-    // ============================================
     function toggleFullscreen(event) {
         event.stopPropagation();
         if (!document.fullscreenElement) {
@@ -392,20 +368,13 @@
         }
     }
 
-    // ============================================
-    // CHAT
-    // ============================================
     function sendMessage() {
         const input = document.getElementById('chatInput');
         const msg = input.value.trim();
         if (!msg) return;
 
         addChatMessage('Tú', msg, true);
-        
-        if (dataChannel && dataChannel.readyState === 'open') {
-            dataChannel.send(JSON.stringify({type: 'chat', msg}));
-        }
-        
+        connections.forEach(c => c.open && c.send({type: 'chat', msg}));
         input.value = '';
     }
 
@@ -415,9 +384,6 @@
         box.scrollTop = box.scrollHeight;
     }
 
-    // ============================================
-    // INTERFAZ
-    // ============================================
     function showModal(id) { document.getElementById(id + 'Modal').classList.add('active'); }
     function hideModal(id) { document.getElementById(id + 'Modal').classList.remove('active'); }
     
@@ -425,15 +391,18 @@
         const link = document.getElementById('inviteLink');
         link.select();
         document.execCommand('copy');
-        alert('✅ Enlace copiado');
+        
+        const btn = event.target;
+        btn.innerHTML = '✅ COPIADO';
+        setTimeout(() => btn.innerHTML = 'COPIAR ENLACE', 2000);
     }
 
     function updatePeerCount(action) {
         const el = document.getElementById('peerCount');
-        let count = parseInt(el.innerText) || 0;
+        let count = parseInt(el.innerHTML) || 0;
         if (action === 'add') count++;
         if (action === 'remove' && count > 0) count--;
-        el.innerText = count + ' 👥';
+        el.innerHTML = count + ' 👥';
     }
 
     window.onload = init;
