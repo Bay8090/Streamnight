@@ -3,87 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Streamnight · P2P Directo</title>
+    <title>Streamer P2P Pro</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        :root { 
+            --red: #ff0000; 
+            --bg: #000; 
+            --ui: rgba(15, 15, 15, 0.98); 
         }
-
-        body {
-            background: #0a0a0a;
-            color: white;
-            height: 100vh;
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
+        
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
         }
-
-        .app {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
+        
+        body { 
+            background: var(--bg); 
+            color: #fff; 
+            height: 100vh; 
+            overflow: hidden; 
+            position: fixed; 
+            width: 100%; 
         }
-
-        /* Header */
-        .header {
-            background: #111;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 2px solid #00ffff;
+        
+        .app { 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
         }
-
-        .logo {
-            font-size: 22px;
-            font-weight: bold;
-            color: #00ffff;
-            text-shadow: 0 0 10px #00ffff;
-        }
-
-        .peer-id {
-            background: #222;
-            padding: 8px 15px;
-            border-radius: 30px;
-            font-size: 12px;
-            font-family: monospace;
-            border: 1px solid #00ffff;
-            color: #00ffff;
-        }
-
-        .btn-icon {
-            background: #222;
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 40px;
-            font-size: 18px;
+        
+        .video-box { 
+            flex: 1; 
+            position: relative; 
+            background: #000; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
             cursor: pointer;
-            margin-left: 10px;
         }
-
-        /* Video container */
-        .video-container {
-            flex: 1;
-            position: relative;
-            background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #videoPlayer {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+        
+        video { 
+            width: 100%; 
+            max-height: 100%; 
             background: #000;
         }
-
-        /* Overlay de play/pause */
+        
+        /* Overlay de play/pause (5 segundos) */
         .play-overlay {
             position: absolute;
             top: 0;
@@ -95,541 +62,462 @@
             justify-content: center;
             background: rgba(0, 0, 0, 0.7);
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.3s ease;
             pointer-events: none;
-            z-index: 10;
+            z-index: 50;
         }
-
+        
         .play-overlay.visible {
             opacity: 1;
         }
-
+        
         .play-icon {
             font-size: 80px;
-            color: #00ffff;
-            animation: pulse 1s infinite;
+            color: var(--red);
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+            animation: pulse 1s ease infinite;
         }
-
+        
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
+            50% { transform: scale(1.1); }
         }
-
-        /* Badge de calidad */
-        .quality-badge {
+        
+        /* Overlay de orientación */
+        .orientation-warning {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            background: #00ffff;
-            color: #000;
-            padding: 8px 16px;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: var(--red);
+            padding: 10px 20px;
             border-radius: 30px;
-            font-weight: bold;
             font-size: 14px;
-            z-index: 5;
+            border: 1px solid var(--red);
+            display: none;
+            z-index: 60;
+            white-space: nowrap;
+            backdrop-filter: blur(5px);
         }
-
-        /* Chat */
-        .chat-sidebar {
-            position: absolute;
-            right: 0;
-            top: 0;
-            bottom: 0;
-            width: 300px;
-            background: #111;
-            border-left: 2px solid #00ffff;
+        
+        .orientation-warning.visible {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+        
+        .overlay { 
+            position: absolute; 
+            inset: 0; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            padding: 15px; 
+            pointer-events: none; 
+            z-index: 10;
+        }
+        
+        .top { 
+            display: flex; 
+            justify-content: space-between; 
+            pointer-events: auto; 
+        }
+        
+        .badge { 
+            background: rgba(0,0,0,0.8); 
+            backdrop-filter: blur(5px);
+            padding: 8px 15px; 
+            border-radius: 30px; 
+            font-size: 12px; 
+            font-weight: 500;
+            border: 1px solid #444; 
+            letter-spacing: 0.5px;
+        }
+        
+        .badge.red {
+            background: var(--red);
+            border-color: #ff4444;
+        }
+        
+        .toolbar { 
+            background: var(--ui); 
+            backdrop-filter: blur(10px);
+            padding: 15px 15px 35px 15px; 
+            display: flex; 
+            gap: 10px; 
+            border-top: 1px solid #333; 
+            z-index: 100; 
+        }
+        
+        .btn { 
+            flex: 1; 
+            padding: 15px 5px; 
+            border: none; 
+            border-radius: 12px; 
+            background: #222; 
+            color: #fff; 
+            font-weight: 600; 
+            font-size: 14px;
             display: flex;
-            flex-direction: column;
-            transform: translateX(100%);
-            transition: transform 0.3s;
-            z-index: 20;
-        }
-
-        .chat-sidebar.active {
-            transform: translateX(0);
-        }
-
-        .chat-header {
-            padding: 20px;
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.2s;
         }
-
-        .chat-header h3 {
-            color: #00ffff;
+        
+        .btn:active {
+            transform: scale(0.95);
+            background: #333;
         }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
+        
+        .btn-main { 
+            background: var(--red); 
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
         }
-
-        .message {
+        
+        .btn-main:active {
+            background: #ff3333;
+        }
+        
+        .panel { 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.95); 
+            backdrop-filter: blur(5px);
+            display: none; 
+            flex-direction: column; 
+            z-index: 200; 
+            padding: 20px; 
+        }
+        
+        .panel.active { 
+            display: flex; 
+        }
+        
+        .panel-content { 
+            background: #1a1a1a; 
+            padding: 25px; 
+            border-radius: 20px; 
+            text-align: center; 
+            margin: auto; 
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #333; 
+        }
+        
+        .panel-content h3 {
             margin-bottom: 15px;
-            max-width: 90%;
+            color: var(--red);
         }
-
-        .message.own {
-            margin-left: auto;
+        
+        input[type="text"] { 
+            width: 100%; 
+            padding: 15px; 
+            margin: 10px 0; 
+            background: #000; 
+            color: #fff; 
+            border: 1px solid #444; 
+            border-radius: 12px; 
+            font-size: 14px;
         }
-
-        .message-bubble {
-            background: #222;
-            padding: 10px 15px;
-            border-radius: 18px;
-            font-size: 13px;
-            word-break: break-word;
-        }
-
-        .message.own .message-bubble {
-            background: #00ffff;
-            color: #000;
-        }
-
-        .chat-input-area {
-            padding: 20px;
-            border-top: 1px solid #333;
-            display: flex;
-            gap: 10px;
-        }
-
-        .chat-input {
-            flex: 1;
-            background: #222;
-            border: 1px solid #333;
-            border-radius: 25px;
-            padding: 12px 18px;
-            color: white;
-        }
-
-        .chat-input:focus {
+        
+        input[type="text"]:focus {
             outline: none;
-            border-color: #00ffff;
+            border-color: var(--red);
         }
-
-        .chat-send {
+        
+        #chatBox { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 15px; 
+            border-bottom: 1px solid #333; 
+            margin-bottom: 15px; 
+            background: #0a0a0a;
+            border-radius: 12px;
+        }
+        
+        .msg { 
+            margin-bottom: 10px; 
+            font-size: 14px; 
+            text-align: left; 
+            line-height: 1.4;
+        }
+        
+        .msg b { 
+            color: var(--red); 
+        }
+        
+        .fullscreen-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid #444;
+            color: white;
             width: 45px;
             height: 45px;
             border-radius: 45px;
-            background: #00ffff;
-            border: none;
-            color: #000;
-            font-size: 18px;
-            cursor: pointer;
-        }
-
-        /* Toolbar */
-        .toolbar {
-            background: #111;
-            padding: 15px 20px;
-            display: flex;
-            gap: 10px;
-            border-top: 2px solid #00ffff;
-        }
-
-        .tool-btn {
-            flex: 1;
-            background: #222;
-            border: 1px solid #333;
-            color: white;
-            padding: 15px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 14px;
+            font-size: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
             cursor: pointer;
-        }
-
-        .tool-btn.primary {
-            background: #00ffff;
-            color: #000;
-            border: none;
-        }
-
-        /* Modal */
-        .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.9);
-            display: none;
-            align-items: center;
-            justify-content: center;
             z-index: 30;
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
         }
-
-        .modal.active {
-            display: flex;
+        
+        .fullscreen-btn:hover {
+            background: var(--red);
         }
-
-        .modal-content {
-            background: #111;
-            border-radius: 24px;
-            padding: 30px;
-            width: 90%;
-            max-width: 400px;
-            border: 2px solid #00ffff;
-        }
-
-        .link-box {
-            display: flex;
-            gap: 10px;
-            margin: 20px 0;
-        }
-
-        .link-box input {
-            flex: 1;
-            background: #000;
-            border: 1px solid #333;
-            border-radius: 12px;
-            padding: 15px;
-            color: white;
-        }
-
-        .copy-btn {
-            background: #00ffff;
-            border: none;
-            color: #000;
-            padding: 0 25px;
-            border-radius: 12px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .status-indicator {
+        
+        /* Botón de rotación */
+        .rotate-btn {
             position: absolute;
-            top: 20px;
-            right: 20px;
+            bottom: 20px;
+            left: 20px;
             background: rgba(0,0,0,0.7);
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-size: 12px;
-            border: 1px solid #00ffff;
-            z-index: 5;
+            border: 1px solid #444;
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 45px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 30;
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
         }
     </style>
 </head>
 <body>
 
 <div class="app">
-    <!-- Header -->
-    <div class="header">
-        <div class="logo">🌙 Streamnight</div>
-        <div style="display: flex; align-items: center;">
-            <span class="peer-id" id="peerIdDisplay">Conectando...</span>
-            <button class="btn-icon" onclick="toggleChat()">💬</button>
-        </div>
-    </div>
-
-    <!-- Video container -->
-    <div class="video-container" onclick="togglePlay()">
-        <video id="videoPlayer" playsinline webkit-playsinline></video>
+    <div class="video-box" id="vBox" onclick="togglePlay()">
+        <video id="v" playsinline webkit-playsinline></video>
         
-        <!-- Play/Pause overlay -->
+        <!-- Play/Pause Overlay -->
         <div class="play-overlay" id="playOverlay">
             <div class="play-icon" id="playIcon">▶️</div>
         </div>
         
-        <!-- Quality badge -->
-        <div class="quality-badge" id="qualityBadge">
-            🌙 50 Mbps
+        <!-- Orientation Warning -->
+        <div class="orientation-warning" id="orientationWarning">
+            🔄 Gira el dispositivo para mejor experiencia
         </div>
         
-        <!-- Status -->
-        <div class="status-indicator" id="statusIndicator">
-            👥 0 espectadores
+        <div class="overlay">
+            <div class="top">
+                <div class="badge" id="status">Iniciando...</div>
+                <div class="badge red" id="peerCount">0 conectados</div>
+            </div>
         </div>
+        
+        <!-- Fullscreen Button -->
+        <button class="fullscreen-btn" onclick="toggleFullscreen(event)">⛶</button>
+        
+        <!-- Rotate Button -->
+        <button class="rotate-btn" onclick="toggleOrientation(event)">🔄</button>
     </div>
 
-    <!-- Chat sidebar -->
-    <div class="chat-sidebar" id="chatSidebar">
-        <div class="chat-header">
-            <h3>Chat</h3>
-            <button class="btn-icon" onclick="toggleChat()" style="width:30px;height:30px;">✕</button>
-        </div>
-        <div class="chat-messages" id="chatMessages"></div>
-        <div class="chat-input-area">
-            <input type="text" class="chat-input" id="chatInput" placeholder="Mensaje..." onkeypress="if(event.key==='Enter') sendMessage()">
-            <button class="chat-send" onclick="sendMessage()">➤</button>
-        </div>
-    </div>
-
-    <!-- Toolbar -->
     <div class="toolbar">
-        <input type="file" id="fileInput" hidden accept="video/*" onchange="handleFileSelect(event)">
-        <button class="tool-btn primary" onclick="document.getElementById('fileInput').click()">
-            📁 Emitir
+        <button class="btn btn-main" onclick="document.getElementById('file').click()">
+            📁 Transmitir
         </button>
-        <button class="tool-btn" onclick="toggleMute()" id="muteBtn">
-            🔊 Audio
+        <button class="btn" onclick="showPanel('invite')">
+            👥 Invitar
         </button>
-        <button class="tool-btn" onclick="showInvite()">
-            🔗 Invitar
-        </button>
-        <button class="tool-btn" onclick="toggleFullscreen()">
-            ⛶ Pantalla completa
+        <button class="btn" onclick="showPanel('chat')">
+            💬 Chat
         </button>
     </div>
 </div>
 
-<!-- Modal invitación -->
-<div class="modal" id="inviteModal" onclick="this.classList.remove('active')">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <h2 style="color:#00ffff;">Compartir Stream</h2>
-        <p style="color:#888;">Envía este enlace a tus amigos:</p>
-        <div class="link-box">
-            <input type="text" id="inviteLink" readonly value="Generando...">
-            <button class="copy-btn" onclick="copyInviteLink()">Copiar</button>
-        </div>
-        <p style="color:#888; font-size:12px; margin-top:15px;">
-            🔗 El enlace contiene tu ID único
+<input type="file" id="file" hidden accept="video/*" onchange="startStream(event)">
+
+<div id="invite" class="panel" onclick="closePanels()">
+    <div class="panel-content" onclick="event.stopPropagation()">
+        <h3>🔗 Invitar Amigos</h3>
+        <p style="font-size: 13px; color: #aaa; margin: 10px 0;">
+            Comparte este enlace para que vean tu transmisión en vivo
         </p>
+        <input type="text" id="link" readonly value="Generando...">
+        <button class="btn btn-main" style="width: 100%;" onclick="copyLink()">
+            📋 Copiar Enlace
+        </button>
+        <button class="btn" style="width: 100%; margin-top: 10px;" onclick="closePanels()">
+            Cerrar
+        </button>
+    </div>
+</div>
+
+<div id="chat" class="panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h3 style="color: var(--red);">💬 Chat</h3>
+        <button onclick="closePanels()" style="background:none; border:none; color:#fff; font-size:24px;">✕</button>
+    </div>
+    <div id="chatBox"></div>
+    <div style="display:flex; gap:8px;">
+        <input type="text" id="msgIn" placeholder="Escribe un mensaje..." onkeypress="if(event.key==='Enter') send()">
+        <button class="btn btn-main" onclick="send()" style="flex:0 0 60px;">➤</button>
     </div>
 </div>
 
 <script>
-    // ============================================
-    // CONFIGURACIÓN
-    // ============================================
-    const CONFIG = {
-        STUN_SERVERS: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' }
-        ]
-    };
-
-    // Elementos DOM
-    const video = document.getElementById('videoPlayer');
-    let peerConnection;
-    let dataChannel;
-    let localStream = null;
-    let remoteStream = null;
-    let isBroadcasting = false;
-    let viewers = new Set();
-    let userName = 'User_' + Math.floor(Math.random() * 1000);
+    const v = document.getElementById('v');
+    let peer, conns = [], myStream;
     let playTimeout;
 
     // ============================================
-    // INICIALIZACIÓN - CREAR PEER CONNECTION
+    // INICIALIZACIÓN
     // ============================================
-    async function init() {
-        console.log('🚀 Iniciando Streamnight...');
+    function init() {
+        peer = new Peer();
         
-        // Generar ID único para este peer
-        const peerId = generatePeerId();
-        document.getElementById('peerIdDisplay').innerHTML = `🌙 ${peerId}`;
+        peer.on('open', id => {
+            document.getElementById('status').innerHTML = `🟢 ONLINE · ${id.substring(0,6)}`;
+            
+            // Generar link de invitación
+            const link = window.location.origin + window.location.pathname + '?id=' + id;
+            document.getElementById('link').value = link;
+            
+            // Auto-conectar si hay ID en URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetId = urlParams.get('id');
+            if(targetId && targetId !== id) {
+                connectToHost(targetId);
+            }
+        });
+
+        // Conexiones de datos (Chat)
+        peer.on('connection', c => setupData(c));
+
+        // Llamadas de video (Recibir Stream)
+        peer.on('call', call => {
+            call.answer();
+            call.on('stream', remoteStream => {
+                v.srcObject = remoteStream;
+                v.play().catch(e => console.log('Autoplay bloqueado:', e));
+            });
+        });
         
-        // Guardar ID en URL para compartir
-        const inviteLink = `${window.location.origin}${window.location.pathname}?id=${peerId}`;
-        document.getElementById('inviteLink').value = inviteLink;
-        
-        // Verificar si venimos de un enlace con ID
-        const urlParams = new URLSearchParams(window.location.search);
-        const targetId = urlParams.get('id');
-        
-        if (targetId && targetId !== peerId) {
-            console.log('🔗 Conectando a:', targetId);
-            connectToPeer(targetId);
-        }
-        
-        // Configurar detección de orientación
+        // Detectar orientación
         setupOrientation();
     }
 
-    // Generar ID aleatorio
-    function generatePeerId() {
-        return Math.random().toString(36).substring(2, 8) + 
-               Math.random().toString(36).substring(2, 8);
-    }
-
     // ============================================
-    // FUNCIÓN PRINCIPAL: EMITIR VIDEO
+    // TRANSMITIR VIDEO
     // ============================================
-    async function handleFileSelect(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        try {
-            // Crear URL del video
-            const videoUrl = URL.createObjectURL(file);
-            video.src = videoUrl;
-            
-            // Esperar que cargue el video
-            await new Promise((resolve) => {
-                video.onloadedmetadata = resolve;
-            });
-            
-            // Reproducir localmente
-            await video.play();
-            console.log('✅ Video local reproduciendo');
-            
-            // CAPTURAR EL STREAM DEL VIDEO
-            if (video.captureStream) {
-                localStream = video.captureStream(30); // 30 fps
-            } else if (video.mozCaptureStream) {
-                localStream = video.mozCaptureStream(30);
-            } else {
-                alert('Tu navegador no soporta captureStream');
-                return;
-            }
-            
-            isBroadcasting = true;
-            document.getElementById('qualityBadge').innerHTML = '🔴 EMITIENDO · 4K';
-            
-            // Si ya hay viewers conectados, enviar stream
-            if (peerConnection && peerConnection.connectionState === 'connected') {
-                localStream.getTracks().forEach(track => {
-                    peerConnection.addTrack(track, localStream);
-                });
-            }
-            
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Error al cargar el video');
-        }
-    }
-
-    // ============================================
-    // CONECTAR A OTRO PEER (VISOR)
-    // ============================================
-    async function connectToPeer(targetId) {
-        console.log('🔌 Conectando a peer:', targetId);
+    function startStream(e) {
+        const file = e.target.files[0];
+        if(!file) return;
         
-        // Crear nueva conexión peer
-        peerConnection = new RTCPeerConnection({
-            iceServers: CONFIG.STUN_SERVERS
+        // Crear URL y reproducir localmente
+        const url = URL.createObjectURL(file);
+        v.src = url;
+        v.play();
+        
+        // Capturar el stream después de que cargue
+        v.onloadedmetadata = () => {
+            setTimeout(() => {
+                try {
+                    myStream = v.captureStream ? v.captureStream(30) : v.mozCaptureStream(30);
+                    
+                    // Enviar a todos los conectados
+                    conns.forEach(conn => {
+                        if(conn.open) {
+                            const call = peer.call(conn.peer, myStream);
+                            call.on('error', err => console.log('Error al enviar stream:', err));
+                        }
+                    });
+                    
+                    addMsg("Sistema", "🎬 Transmitiendo en vivo...");
+                } catch(err) {
+                    console.error('Error al capturar stream:', err);
+                }
+            }, 500);
+        };
+    }
+
+    // ============================================
+    // CONECTAR A HOST (VER)
+    // ============================================
+    function connectToHost(id) {
+        const conn = peer.connect(id);
+        setupData(conn);
+    }
+
+    // ============================================
+    // CONFIGURAR CONEXIÓN DE DATOS
+    // ============================================
+    function setupData(conn) {
+        conn.on('open', () => {
+            conns.push(conn);
+            updateCount();
+            addMsg("Sistema", "🔗 Nuevo espectador conectado");
+            
+            // Si ya estamos transmitiendo, enviar stream
+            if(myStream) {
+                const call = peer.call(conn.peer, myStream);
+                call.on('error', err => console.log('Error al enviar stream:', err));
+            }
         });
-
-        // Crear canal de datos para chat
-        dataChannel = peerConnection.createDataChannel('chat');
-        setupDataChannel();
-
-        // Manejar tracks entrantes
-        peerConnection.ontrack = (event) => {
-            console.log('📺 Recibiendo stream');
-            
-            if (!remoteStream) {
-                remoteStream = new MediaStream();
-                video.srcObject = remoteStream;
+        
+        conn.on('data', data => {
+            if(data.type === 'chat') {
+                addMsg("Amigo", data.msg);
+            } else if(data.type === 'control') {
+                if(data.action === 'play') v.play();
+                if(data.action === 'pause') v.pause();
             }
-            
-            event.streams[0].getTracks().forEach(track => {
-                remoteStream.addTrack(track);
-            });
-            
-            // Intentar reproducir
-            video.play()
-                .then(() => console.log('▶️ Reproduciendo'))
-                .catch(e => console.log('Autoplay bloqueado:', e));
-            
-            updateViewerCount('add');
-        };
-
-        // Manejar candidatos ICE
-        peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                console.log('📡 ICE candidate generado');
-                // En una implementación real, enviaríamos esto al otro peer
-                // Por ahora usamos señalización manual
-            }
-        };
-
-        peerConnection.onconnectionstatechange = () => {
-            console.log('🔌 Estado:', peerConnection.connectionState);
-            if (peerConnection.connectionState === 'connected') {
-                console.log('✅ Conectado!');
-            }
-        };
-
-        // Crear oferta
-        try {
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            
-            // Aquí necesitaríamos enviar la oferta al otro peer
-            // Por simplicidad, usaremos prompt para señalización manual
-            const offerString = JSON.stringify(peerConnection.localDescription);
-            console.log('📤 OFERTA:', offerString);
-            
-            // En un sistema real, esto se enviaría por un servidor de señalización
-            // Por ahora, el otro peer debe ingresar esta oferta manualmente
-            prompt('Copia esta oferta y envíala al otro peer:', offerString);
-            
-        } catch (error) {
-            console.error('Error creating offer:', error);
-        }
+        });
+        
+        conn.on('close', () => {
+            conns = conns.filter(c => c.peer !== conn.peer);
+            updateCount();
+            addMsg("Sistema", "👋 Espectador desconectado");
+        });
     }
 
     // ============================================
-    // CHAT
-    // ============================================
-    function setupDataChannel() {
-        if (!dataChannel) return;
-        
-        dataChannel.onopen = () => {
-            console.log('💬 Canal de chat abierto');
-        };
-        
-        dataChannel.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'chat') {
-                addChatMessage(data.user, data.message, false);
-            }
-        };
-    }
-
-    function sendMessage() {
-        const input = document.getElementById('chatInput');
-        const message = input.value.trim();
-        if (!message) return;
-        
-        addChatMessage(userName, message, true);
-        
-        if (dataChannel && dataChannel.readyState === 'open') {
-            dataChannel.send(JSON.stringify({
-                type: 'chat',
-                user: userName,
-                message: message
-            }));
-        }
-        
-        input.value = '';
-    }
-
-    function addChatMessage(user, message, isOwn) {
-        const container = document.getElementById('chatMessages');
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `message ${isOwn ? 'own' : ''}`;
-        msgDiv.innerHTML = `<div class="message-bubble"><strong>${user}:</strong> ${message}</div>`;
-        container.appendChild(msgDiv);
-        container.scrollTop = container.scrollHeight;
-    }
-
-    // ============================================
-    // PLAY/PAUSE OVERLAY (5 segundos)
+    // PLAY/PAUSE TOGGLE CON OVERLAY (5 SEGUNDOS)
     // ============================================
     function togglePlay() {
-        if (!video.srcObject && !video.src) return;
+        if(!v.srcObject && !v.src) return;
         
         const overlay = document.getElementById('playOverlay');
         const icon = document.getElementById('playIcon');
         
-        if (video.paused) {
-            video.play();
+        if(v.paused) {
+            v.play();
             icon.textContent = '▶️';
+            
+            // Notificar a todos
+            conns.forEach(conn => {
+                if(conn.open) conn.send({type: 'control', action: 'play'});
+            });
         } else {
-            video.pause();
+            v.pause();
             icon.textContent = '⏸️';
+            
+            // Notificar a todos
+            conns.forEach(conn => {
+                if(conn.open) conn.send({type: 'control', action: 'pause'});
+            });
         }
         
+        // Mostrar overlay
         overlay.classList.add('visible');
         
+        // Ocultar después de 5 segundos
         clearTimeout(playTimeout);
         playTimeout = setTimeout(() => {
             overlay.classList.remove('visible');
@@ -637,60 +525,109 @@
     }
 
     // ============================================
-    // ORIENTACIÓN
+    // ORIENTACIÓN DE PANTALLA
     // ============================================
     function setupOrientation() {
         window.addEventListener('orientationchange', () => {
-            if (window.orientation === 0 || window.orientation === 180) {
-                // Modo vertical - mostrar advertencia
-                alert('🌙 Gira el dispositivo para mejor experiencia');
+            const warning = document.getElementById('orientationWarning');
+            
+            if(window.orientation === 0 || window.orientation === 180) {
+                // Vertical
+                warning.classList.add('visible');
+                setTimeout(() => warning.classList.remove('visible'), 3000);
             }
         });
+        
+        // Verificar al inicio
+        setTimeout(() => {
+            if(window.orientation === 0 || window.orientation === 180) {
+                document.getElementById('orientationWarning').classList.add('visible');
+                setTimeout(() => {
+                    document.getElementById('orientationWarning').classList.remove('visible');
+                }, 3000);
+            }
+        }, 1000);
+    }
+    
+    function toggleOrientation(event) {
+        event.stopPropagation();
+        
+        if(screen.orientation && screen.orientation.lock) {
+            if(window.orientation === 0 || window.orientation === 180) {
+                screen.orientation.lock('landscape').catch(e => console.log(e));
+            } else {
+                screen.orientation.lock('portrait').catch(e => console.log(e));
+            }
+        } else {
+            alert('Usa la rotación automática del dispositivo');
+        }
     }
 
     // ============================================
-    // FUNCIONES DE INTERFAZ
+    // PANTALLA COMPLETA
     // ============================================
-    function toggleChat() {
-        document.getElementById('chatSidebar').classList.toggle('active');
-    }
-
-    function toggleMute() {
-        video.muted = !video.muted;
-        document.getElementById('muteBtn').innerHTML = video.muted ? '🔇 Audio' : '🔊 Audio';
-    }
-
-    function toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            if (video.requestFullscreen) {
-                video.requestFullscreen();
-            } else if (video.webkitRequestFullscreen) {
-                video.webkitRequestFullscreen();
+    function toggleFullscreen(event) {
+        event.stopPropagation();
+        
+        if(!document.fullscreenElement) {
+            if(v.requestFullscreen) {
+                v.requestFullscreen();
+            } else if(v.webkitRequestFullscreen) {
+                v.webkitRequestFullscreen();
             }
         } else {
             document.exitFullscreen();
         }
     }
 
-    function showInvite() {
-        document.getElementById('inviteModal').classList.add('active');
+    // ============================================
+    // FUNCIONES DE CHAT
+    // ============================================
+    function send() {
+        const input = document.getElementById('msgIn');
+        const msg = input.value.trim();
+        if(!msg) return;
+        
+        addMsg("Tú", msg);
+        
+        conns.forEach(conn => {
+            if(conn.open) conn.send({type: 'chat', msg: msg});
+        });
+        
+        input.value = "";
     }
 
-    function copyInviteLink() {
-        const input = document.getElementById('inviteLink');
-        input.select();
+    function addMsg(user, msg) {
+        const box = document.getElementById('chatBox');
+        box.innerHTML += `<div class="msg"><b>${user}:</b> ${msg}</div>`;
+        box.scrollTop = box.scrollHeight;
+    }
+
+    // ============================================
+    // FUNCIONES DE INTERFAZ
+    // ============================================
+    function updateCount() {
+        document.getElementById('peerCount').innerHTML = `👥 ${conns.length} conectados`;
+    }
+
+    function showPanel(id) { 
+        document.getElementById(id).classList.add('active'); 
+    }
+    
+    function closePanels() { 
+        document.getElementById('invite').classList.remove('active'); 
+        document.getElementById('chat').classList.remove('active'); 
+    }
+
+    function copyLink() {
+        const link = document.getElementById('link');
+        link.select();
         document.execCommand('copy');
         
-        const btn = document.querySelector('.copy-btn');
-        btn.textContent = '✅ Copiado';
-        setTimeout(() => btn.textContent = 'Copiar', 2000);
-    }
-
-    function updateViewerCount(action) {
-        if (action === 'add') viewers.add('viewer');
-        if (action === 'remove') viewers.clear();
-        
-        document.getElementById('statusIndicator').innerHTML = `👥 ${viewers.size} espectadores`;
+        const btn = event.target;
+        const originalText = btn.innerText;
+        btn.innerText = '✅ Copiado!';
+        setTimeout(() => btn.innerText = originalText, 2000);
     }
 
     // Iniciar
