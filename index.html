@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Streamnight · 4K</title>
-    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <title>Streamnight · WebRTC 4K</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -86,6 +85,7 @@
             font-size: 14px;
             font-weight: bold;
             z-index: 10;
+            white-space: nowrap;
         }
         
         .toolbar {
@@ -135,6 +135,17 @@
             border: 1px solid #333;
             border-radius: 8px;
         }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            background: #000;
+            color: #0f0;
+            border: 1px solid #333;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 10px 0;
+        }
         #chatMessages {
             height: 300px;
             overflow-y: auto;
@@ -150,6 +161,10 @@
             border-radius: 5px;
         }
         .message.own { background: red; text-align: right; }
+        .signal-step {
+            display: none;
+        }
+        .signal-step.active { display: block; }
     </style>
 </head>
 <body>
@@ -167,24 +182,53 @@
     <div class="badge" id="status">Iniciando...</div>
     <div class="badge" id="peerCount">0</div>
     
-    <div class="quality-badge" id="qualityBadge">⚡ 4K 50Mbps ⚡</div>
+    <div class="quality-badge" id="qualityBadge">⚡ WEBRTC 4K ⚡</div>
 </div>
 
 <div class="toolbar">
     <input type="file" id="fileInput" hidden accept="video/*" onchange="startStream()">
-    <button class="btn btn-red" onclick="document.getElementById('fileInput').click()">📹 EMITIR</button>
-    <button class="btn" onclick="showModal('invite')">🔗 INVITAR</button>
+    <button class="btn btn-red" onclick="document.getElementById('fileInput').click()">📹 EMITIR 4K</button>
+    <button class="btn" onclick="showSignaling()">🔗 CONECTAR</button>
     <button class="btn" onclick="showModal('chat')">💬 CHAT</button>
 </div>
 
-<div id="inviteModal" class="modal" onclick="hideModal('invite')">
+<!-- Panel de señalización WebRTC -->
+<div id="signalModal" class="modal" onclick="hideModal('signal')">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3 style="color:red;">🔗 COMPARTIR</h3>
-        <input type="text" id="inviteLink" readonly>
-        <button onclick="copyLink()" style="width:100%; background:red; color:white; border:none; padding:15px;">COPIAR</button>
+        <span class="close" onclick="hideModal('signal')">✕</span>
+        <h3 style="color:red;">🔌 CONEXIÓN WEBRTC</h3>
+        
+        <!-- PASO 1: Crear oferta (emisor) -->
+        <div id="step1" class="signal-step active">
+            <p style="color:#888;">1. Copia esta OFERTA y envíala a tu amigo:</p>
+            <textarea id="offerText" rows="4" readonly></textarea>
+            <button onclick="copyOffer()" style="width:100%; background:red; color:white; border:none; padding:10px;">📋 COPIAR OFERTA</button>
+        </div>
+        
+        <!-- PASO 2: Ingresar oferta (receptor) -->
+        <div id="step2" class="signal-step">
+            <p style="color:#888;">2. Pega la OFERTA que te envió tu amigo:</p>
+            <textarea id="remoteOfferText" rows="4" placeholder="Pega aquí la oferta..."></textarea>
+            <button onclick="processOffer()" style="width:100%; background:red; color:white; border:none; padding:10px;">📥 PROCESAR OFERTA</button>
+        </div>
+        
+        <!-- PASO 3: Copiar respuesta (receptor) -->
+        <div id="step3" class="signal-step">
+            <p style="color:#888;">3. Copia esta RESPUESTA y envíala a tu amigo:</p>
+            <textarea id="answerText" rows="4" readonly></textarea>
+            <button onclick="copyAnswer()" style="width:100%; background:red; color:white; border:none; padding:10px;">📋 COPIAR RESPUESTA</button>
+        </div>
+        
+        <!-- PASO 4: Ingresar respuesta (emisor) -->
+        <div id="step4" class="signal-step">
+            <p style="color:#888;">4. Pega la RESPUESTA de tu amigo:</p>
+            <textarea id="remoteAnswerText" rows="4" placeholder="Pega aquí la respuesta..."></textarea>
+            <button onclick="processAnswer()" style="width:100%; background:red; color:white; border:none; padding:10px;">🔗 COMPLETAR CONEXIÓN</button>
+        </div>
     </div>
 </div>
 
+<!-- Modal Chat -->
 <div id="chatModal" class="modal" onclick="hideModal('chat')">
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 style="color:red;">💬 CHAT</h3>
@@ -198,110 +242,210 @@
 
 <script>
     // ============================================
-    // VERSIÓN SIMPLE QUE FUNCIONA
+    // WEBRTC PURO - MÁXIMA CALIDAD
     // ============================================
     const video = document.getElementById('video');
-    let peer, connections = [], localStream = null;
+    let peerConnection;
+    let dataChannel;
+    let localStream = null;
+    let remoteStream = null;
     let playTimeout;
+    let isInitiator = false;
 
-    function init() {
-        peer = new Peer();
+    // Configuración para MÁXIMA CALIDAD
+    const config = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+    };
 
-        peer.on('open', (id) => {
-            document.getElementById('status').innerText = 'ID: ' + id.substring(0,6);
-            const link = window.location.href.split('?')[0] + '?id=' + id;
-            document.getElementById('inviteLink').value = link;
-            
-            const urlParams = new URLSearchParams(window.location.search);
-            const targetId = urlParams.get('id');
-            if (targetId && targetId !== id) {
-                connectToPeer(targetId);
-            }
-        });
-
-        peer.on('connection', (conn) => {
-            setupConnection(conn);
-        });
-
-        peer.on('call', (call) => {
-            if (localStream) {
-                call.answer(localStream);
-            } else {
-                call.answer();
-            }
-            
-            call.on('stream', (remoteStream) => {
-                video.srcObject = remoteStream;
-                video.play();
-                updatePeerCount('add');
-            });
-        });
-    }
-
-    function startStream() {
+    // ============================================
+    // 1. EMITIR VIDEO (CAPTURAR STREAM)
+    // ============================================
+    async function startStream() {
         const file = document.getElementById('fileInput').files[0];
         if (!file) return;
 
         // Reproducir localmente
         video.src = URL.createObjectURL(file);
-        video.play();
+        await video.play();
         document.getElementById('playPauseBtn').innerText = '⏸️';
 
-        video.onloadeddata = () => {
-            // Capturar stream directamente
-            if (video.captureStream) {
-                localStream = video.captureStream(30);
-            } else if (video.mozCaptureStream) {
-                localStream = video.mozCaptureStream(30);
-            }
+        // Esperar metadata
+        await new Promise(resolve => video.onloadedmetadata = resolve);
 
-            if (localStream) {
-                // Llamar a todos los conectados
-                connections.forEach(conn => {
-                    if (conn.open) {
-                        peer.call(conn.peer, localStream);
-                    }
-                });
+        // Capturar stream con MÁXIMA CALIDAD
+        if (video.captureStream) {
+            localStream = video.captureStream(60); // 60fps
+        } else if (video.mozCaptureStream) {
+            localStream = video.mozCaptureStream(60);
+        }
+
+        if (localStream) {
+            // Forzar configuración de alta calidad
+            const videoTrack = localStream.getVideoTracks()[0];
+            if (videoTrack) {
+                await videoTrack.applyConstraints({
+                    width: { exact: video.videoWidth },
+                    height: { exact: video.videoHeight },
+                    frameRate: { ideal: 60 }
+                }).catch(e => console.log('Constraints no aplicables'));
+            }
+        }
+    }
+
+    // ============================================
+    // 2. CREAR CONEXIÓN (INICIADOR)
+    // ============================================
+    async function createConnection() {
+        peerConnection = new RTCPeerConnection(config);
+
+        // Añadir stream local si existe
+        if (localStream) {
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+        }
+
+        // Canal de datos para chat
+        dataChannel = peerConnection.createDataChannel('chat');
+        dataChannel.onopen = () => console.log('Canal abierto');
+        dataChannel.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            if (data.type === 'chat') addChatMessage('Amigo', data.msg, false);
+        };
+
+        // Manejar stream entrante
+        peerConnection.ontrack = (event) => {
+            if (!remoteStream) {
+                remoteStream = new MediaStream();
+                video.srcObject = remoteStream;
+            }
+            event.streams[0].getTracks().forEach(track => {
+                remoteStream.addTrack(track);
+            });
+            video.play();
+            updatePeerCount('add');
+        };
+
+        // ICE candidates
+        peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                console.log('ICE candidate generado');
             }
         };
+
+        // Crear oferta
+        const offer = await peerConnection.createOffer({
+            offerToReceiveVideo: true,
+            offerToReceiveAudio: true
+        });
+        
+        await peerConnection.setLocalDescription(offer);
+        
+        // Mostrar oferta para copiar
+        document.getElementById('offerText').value = JSON.stringify(peerConnection.localDescription);
+        
+        isInitiator = true;
+        showStep(1);
     }
 
-    function connectToPeer(id) {
-        const conn = peer.connect(id);
-        setupConnection(conn);
-    }
+    // ============================================
+    // 3. PROCESAR OFERTA (RECEPTOR)
+    // ============================================
+    async function processOffer() {
+        const offerText = document.getElementById('remoteOfferText').value;
+        if (!offerText) return;
 
-    function setupConnection(conn) {
-        connections.push(conn);
-        updatePeerCount('add');
+        const offer = JSON.parse(offerText);
+        
+        peerConnection = new RTCPeerConnection(config);
 
-        conn.on('open', () => {
-            if (localStream) {
-                peer.call(conn.peer, localStream);
+        // Canal de datos para chat
+        peerConnection.ondatachannel = (event) => {
+            dataChannel = event.channel;
+            dataChannel.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.type === 'chat') addChatMessage('Amigo', data.msg, false);
+            };
+        };
+
+        // Manejar stream entrante
+        peerConnection.ontrack = (event) => {
+            if (!remoteStream) {
+                remoteStream = new MediaStream();
+                video.srcObject = remoteStream;
             }
-        });
+            event.streams[0].getTracks().forEach(track => {
+                remoteStream.addTrack(track);
+            });
+            video.play();
+            updatePeerCount('add');
+        };
 
-        conn.on('data', (data) => {
-            if (data.type === 'chat') {
-                addChatMessage('Amigo', data.msg, false);
-            } else if (data.type === 'control') {
-                if (data.action === 'play') {
-                    video.play();
-                    document.getElementById('playPauseBtn').innerText = '⏸️';
-                }
-                if (data.action === 'pause') {
-                    video.pause();
-                    document.getElementById('playPauseBtn').innerText = '▶️';
-                }
-            }
-        });
-
-        conn.on('close', () => {
-            connections = connections.filter(c => c.peer !== conn.peer);
-            updatePeerCount('remove');
-        });
+        await peerConnection.setRemoteDescription(offer);
+        
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        
+        document.getElementById('answerText').value = JSON.stringify(peerConnection.localDescription);
+        
+        showStep(3);
     }
 
+    // ============================================
+    // 4. PROCESAR RESPUESTA (INICIADOR)
+    // ============================================
+    async function processAnswer() {
+        const answerText = document.getElementById('remoteAnswerText').value;
+        if (!answerText) return;
+
+        const answer = JSON.parse(answerText);
+        await peerConnection.setRemoteDescription(answer);
+        
+        hideModal('signal');
+        addChatMessage('🎬 Sistema', '¡Conectado! Calidad máxima', false);
+    }
+
+    // ============================================
+    // FUNCIONES DE INTERFAZ
+    // ============================================
+    function showSignaling() {
+        if (localStream) {
+            // Somos emisor, crear conexión
+            createConnection();
+        }
+        showModal('signal');
+    }
+
+    function showStep(step) {
+        document.getElementById('step1').classList.remove('active');
+        document.getElementById('step2').classList.remove('active');
+        document.getElementById('step3').classList.remove('active');
+        document.getElementById('step4').classList.remove('active');
+        document.getElementById(`step${step}`).classList.add('active');
+    }
+
+    function copyOffer() {
+        const text = document.getElementById('offerText');
+        text.select();
+        document.execCommand('copy');
+        alert('✅ Oferta copiada');
+        showStep(2); // Siguiente paso: pegar oferta
+    }
+
+    function copyAnswer() {
+        const text = document.getElementById('answerText');
+        text.select();
+        document.execCommand('copy');
+        alert('✅ Respuesta copiada');
+        showStep(4); // Siguiente paso: pegar respuesta
+    }
+
+    // ============================================
+    // RESTO DE FUNCIONES (PLAY/PAUSE, CHAT, ETC)
+    // ============================================
     function togglePlay(event) {
         if (event.target.classList.contains('btn')) return;
         if (!video.srcObject && !video.src) return;
@@ -313,12 +457,10 @@
             video.play();
             icon.innerText = '▶️';
             document.getElementById('playPauseBtn').innerText = '⏸️';
-            connections.forEach(c => c.open && c.send({type: 'control', action: 'play'}));
         } else {
             video.pause();
             icon.innerText = '⏸️';
             document.getElementById('playPauseBtn').innerText = '▶️';
-            connections.forEach(c => c.open && c.send({type: 'control', action: 'pause'}));
         }
 
         overlay.classList.add('visible');
@@ -342,7 +484,11 @@
         if (!msg) return;
 
         addChatMessage('Tú', msg, true);
-        connections.forEach(c => c.open && c.send({type: 'chat', msg}));
+        
+        if (dataChannel && dataChannel.readyState === 'open') {
+            dataChannel.send(JSON.stringify({type: 'chat', msg}));
+        }
+        
         input.value = '';
     }
 
@@ -354,13 +500,6 @@
 
     function showModal(id) { document.getElementById(id + 'Modal').classList.add('active'); }
     function hideModal(id) { document.getElementById(id + 'Modal').classList.remove('active'); }
-    
-    function copyLink() {
-        const link = document.getElementById('inviteLink');
-        link.select();
-        document.execCommand('copy');
-        alert('Enlace copiado');
-    }
 
     function updatePeerCount(action) {
         const el = document.getElementById('peerCount');
@@ -369,8 +508,6 @@
         if (action === 'remove' && count > 0) count--;
         el.innerText = count;
     }
-
-    window.onload = init;
 </script>
 </body>
 </html>
