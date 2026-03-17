@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Streamnight · 4K ULTRA</title>
+    <title>Streamnight · 4K</title>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -42,10 +42,6 @@
             font-size: 28px;
             cursor: pointer;
             z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 20px red;
         }
         #playPauseBtn { left: 20px; }
         #fullscreenBtn { right: 20px; }
@@ -89,12 +85,8 @@
             border-radius: 40px;
             font-size: 14px;
             font-weight: bold;
-            border: 2px solid white;
             z-index: 10;
-            white-space: nowrap;
-            animation: pulse 2s infinite;
         }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.8} }
         
         .toolbar {
             background: #111;
@@ -175,22 +167,21 @@
     <div class="badge" id="status">Iniciando...</div>
     <div class="badge" id="peerCount">0</div>
     
-    <div class="quality-badge" id="qualityBadge">⚡ 4K SIN COMPRESIÓN ⚡</div>
+    <div class="quality-badge" id="qualityBadge">⚡ 4K 50Mbps ⚡</div>
 </div>
 
 <div class="toolbar">
     <input type="file" id="fileInput" hidden accept="video/*" onchange="startStream()">
-    <button class="btn btn-red" onclick="document.getElementById('fileInput').click()">📹 EMITIR 4K</button>
+    <button class="btn btn-red" onclick="document.getElementById('fileInput').click()">📹 EMITIR</button>
     <button class="btn" onclick="showModal('invite')">🔗 INVITAR</button>
     <button class="btn" onclick="showModal('chat')">💬 CHAT</button>
 </div>
 
 <div id="inviteModal" class="modal" onclick="hideModal('invite')">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3 style="color:red;">🔗 COMPARTIR 4K</h3>
-        <p style="color:#888;">CALIDAD ORIGINAL · SIN COMPRESIÓN</p>
+        <h3 style="color:red;">🔗 COMPARTIR</h3>
         <input type="text" id="inviteLink" readonly>
-        <button onclick="copyLink()" style="width:100%; background:red; color:white; border:none; padding:15px;">COPIAR ENLACE</button>
+        <button onclick="copyLink()" style="width:100%; background:red; color:white; border:none; padding:15px;">COPIAR</button>
     </div>
 </div>
 
@@ -207,19 +198,17 @@
 
 <script>
     // ============================================
-    // VERSIÓN PEERJS QUE FUNCIONA - CON CALIDAD MÁXIMA
+    // VERSIÓN SIMPLE QUE FUNCIONA
     // ============================================
     const video = document.getElementById('video');
     let peer, connections = [], localStream = null;
-    let isBroadcasting = false;
     let playTimeout;
 
     function init() {
-        // Usar PeerJS que ya funciona
         peer = new Peer();
 
         peer.on('open', (id) => {
-            document.getElementById('status').innerHTML = `🟢 ${id.substring(0,6)}`;
+            document.getElementById('status').innerText = 'ID: ' + id.substring(0,6);
             const link = window.location.href.split('?')[0] + '?id=' + id;
             document.getElementById('inviteLink').value = link;
             
@@ -230,11 +219,16 @@
             }
         });
 
-        peer.on('connection', (conn) => setupConnection(conn));
+        peer.on('connection', (conn) => {
+            setupConnection(conn);
+        });
 
         peer.on('call', (call) => {
-            if (localStream) call.answer(localStream);
-            else call.answer();
+            if (localStream) {
+                call.answer(localStream);
+            } else {
+                call.answer();
+            }
             
             call.on('stream', (remoteStream) => {
                 video.srcObject = remoteStream;
@@ -244,9 +238,6 @@
         });
     }
 
-    // ============================================
-    // EMITIR CON LA MÁXIMA CALIDAD POSIBLE
-    // ============================================
     function startStream() {
         const file = document.getElementById('fileInput').files[0];
         if (!file) return;
@@ -254,54 +245,24 @@
         // Reproducir localmente
         video.src = URL.createObjectURL(file);
         video.play();
-        document.getElementById('playPauseBtn').innerHTML = '⏸️';
+        document.getElementById('playPauseBtn').innerText = '⏸️';
 
-        // Cuando el video esté cargado, capturar stream
         video.onloadeddata = () => {
-            setTimeout(() => {
-                // Capturar stream a 60fps para máxima calidad
-                if (video.captureStream) {
-                    localStream = video.captureStream(60);
-                } else if (video.mozCaptureStream) {
-                    localStream = video.mozCaptureStream(60);
-                }
+            // Capturar stream directamente
+            if (video.captureStream) {
+                localStream = video.captureStream(30);
+            } else if (video.mozCaptureStream) {
+                localStream = video.mozCaptureStream(30);
+            }
 
-                if (localStream) {
-                    // ========================================
-                    // TRUCO PARA MEJORAR CALIDAD
-                    // ========================================
-                    // Crear un canvas para no perder calidad
-                    const canvas = document.createElement('canvas');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    const ctx = canvas.getContext('2d');
-                    
-                    // Dibujar el video en el canvas cada frame
-                    function drawVideo() {
-                        if (!video.paused && !video.ended) {
-                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                            requestAnimationFrame(drawVideo);
-                        }
+            if (localStream) {
+                // Llamar a todos los conectados
+                connections.forEach(conn => {
+                    if (conn.open) {
+                        peer.call(conn.peer, localStream);
                     }
-                    drawVideo();
-                    
-                    // Capturar del canvas (mejor calidad)
-                    if (canvas.captureStream) {
-                        localStream = canvas.captureStream(60);
-                    }
-
-                    isBroadcasting = true;
-                    
-                    // Llamar a todos los peers conectados
-                    connections.forEach(conn => {
-                        if (conn.open) {
-                            peer.call(conn.peer, localStream);
-                        }
-                    });
-                    
-                    addChatMessage('🎬 4K', 'Transmisión SIN COMPRESIÓN iniciada', false);
-                }
-            }, 1000);
+                });
+            }
         };
     }
 
@@ -315,16 +276,23 @@
         updatePeerCount('add');
 
         conn.on('open', () => {
-            if (localStream && isBroadcasting) {
+            if (localStream) {
                 peer.call(conn.peer, localStream);
             }
         });
 
         conn.on('data', (data) => {
-            if (data.type === 'chat') addChatMessage('Amigo', data.msg, false);
-            if (data.type === 'control') {
-                if (data.action === 'play') { video.play(); document.getElementById('playPauseBtn').innerHTML = '⏸️'; }
-                if (data.action === 'pause') { video.pause(); document.getElementById('playPauseBtn').innerHTML = '▶️'; }
+            if (data.type === 'chat') {
+                addChatMessage('Amigo', data.msg, false);
+            } else if (data.type === 'control') {
+                if (data.action === 'play') {
+                    video.play();
+                    document.getElementById('playPauseBtn').innerText = '⏸️';
+                }
+                if (data.action === 'pause') {
+                    video.pause();
+                    document.getElementById('playPauseBtn').innerText = '▶️';
+                }
             }
         });
 
@@ -343,13 +311,13 @@
 
         if (video.paused) {
             video.play();
-            icon.innerHTML = '▶️';
-            document.getElementById('playPauseBtn').innerHTML = '⏸️';
+            icon.innerText = '▶️';
+            document.getElementById('playPauseBtn').innerText = '⏸️';
             connections.forEach(c => c.open && c.send({type: 'control', action: 'play'}));
         } else {
             video.pause();
-            icon.innerHTML = '⏸️';
-            document.getElementById('playPauseBtn').innerHTML = '▶️';
+            icon.innerText = '⏸️';
+            document.getElementById('playPauseBtn').innerText = '▶️';
             connections.forEach(c => c.open && c.send({type: 'control', action: 'pause'}));
         }
 
@@ -391,18 +359,15 @@
         const link = document.getElementById('inviteLink');
         link.select();
         document.execCommand('copy');
-        
-        const btn = event.target;
-        btn.innerHTML = '✅ COPIADO';
-        setTimeout(() => btn.innerHTML = 'COPIAR ENLACE', 2000);
+        alert('Enlace copiado');
     }
 
     function updatePeerCount(action) {
         const el = document.getElementById('peerCount');
-        let count = parseInt(el.innerHTML) || 0;
+        let count = parseInt(el.innerText) || 0;
         if (action === 'add') count++;
         if (action === 'remove' && count > 0) count--;
-        el.innerHTML = count + ' 👥';
+        el.innerText = count;
     }
 
     window.onload = init;
