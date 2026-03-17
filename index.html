@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stream Simple</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <title>Streamnight · P2P Simple</title>
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -13,7 +13,7 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            font-family: Arial;
+            font-family: Arial, sans-serif;
         }
         .video-container {
             flex: 1;
@@ -28,16 +28,15 @@
             max-height: 100%;
             background: #000;
         }
-        #playPauseBtn {
+        #playPauseBtn, #fullscreenBtn {
             position: absolute;
             bottom: 80px;
-            left: 20px;
-            background: red;
-            color: white;
-            border: none;
             width: 60px;
             height: 60px;
             border-radius: 30px;
+            background: red;
+            color: white;
+            border: none;
             font-size: 30px;
             cursor: pointer;
             z-index: 100;
@@ -45,23 +44,8 @@
             align-items: center;
             justify-content: center;
         }
-        #fullscreenBtn {
-            position: absolute;
-            bottom: 80px;
-            right: 20px;
-            background: red;
-            color: white;
-            border: none;
-            width: 60px;
-            height: 60px;
-            border-radius: 30px;
-            font-size: 30px;
-            cursor: pointer;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        #playPauseBtn { left: 20px; }
+        #fullscreenBtn { right: 20px; }
         .controls {
             background: #111;
             padding: 15px;
@@ -69,7 +53,7 @@
             gap: 10px;
             border-top: 2px solid red;
         }
-        button {
+        .btn {
             flex: 1;
             padding: 15px;
             background: #222;
@@ -77,25 +61,25 @@
             border: none;
             border-radius: 8px;
             font-size: 16px;
+            cursor: pointer;
         }
-        .btn-red {
-            background: red;
-        }
+        .btn-red { background: red; }
         .panel {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.95);
             display: none;
             padding: 20px;
             z-index: 200;
         }
-        .panel.active { display: block; }
+        .panel.active { display: flex; align-items: center; justify-content: center; }
         .panel-content {
             background: #111;
-            padding: 20px;
-            border-radius: 10px;
+            padding: 25px;
+            border-radius: 15px;
+            width: 100%;
             max-width: 400px;
-            margin: 50px auto;
+            border: 1px solid #333;
         }
         input {
             width: 100%;
@@ -104,6 +88,7 @@
             background: #000;
             color: white;
             border: 1px solid #333;
+            border-radius: 8px;
         }
         #chatMessages {
             height: 300px;
@@ -111,36 +96,48 @@
             background: #000;
             padding: 10px;
             margin-bottom: 10px;
+            border: 1px solid #333;
+            border-radius: 8px;
         }
         .message {
             margin-bottom: 10px;
-            padding: 8px;
+            padding: 10px;
             background: #1a1a1a;
-            border-radius: 5px;
+            border-radius: 8px;
         }
         .message.own { background: red; text-align: right; }
         .status {
             position: absolute;
             top: 10px; left: 10px;
             background: rgba(0,0,0,0.7);
-            padding: 5px 10px;
-            border-radius: 5px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
             z-index: 100;
+            border: 1px solid #444;
         }
         .peer-count {
             position: absolute;
             top: 10px; right: 10px;
             background: rgba(0,0,0,0.7);
-            padding: 5px 10px;
-            border-radius: 5px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
             z-index: 100;
+            border: 1px solid red;
         }
         .badge {
             background: red;
-            padding: 2px 6px;
-            border-radius: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
             font-size: 10px;
             margin-left: 5px;
+        }
+        .close {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+            color: red;
         }
     </style>
 </head>
@@ -149,7 +146,6 @@
 <div class="video-container">
     <video id="video" playsinline></video>
     
-    <!-- BOTONES VISIBLES -->
     <button id="playPauseBtn" onclick="togglePlay(event)">▶️</button>
     <button id="fullscreenBtn" onclick="toggleFullscreen(event)">⛶</button>
     
@@ -159,136 +155,278 @@
 
 <div class="controls">
     <input type="file" id="fileInput" hidden accept="video/*" onchange="startStream()">
-    <button class="btn-red" onclick="document.getElementById('fileInput').click()">📹 Emitir</button>
-    <button onclick="showInvite()">🔗 Invitar</button>
-    <button onclick="showChat()">💬 Chat</button>
+    <button class="btn btn-red" onclick="document.getElementById('fileInput').click()">📹 EMITIR</button>
+    <button class="btn" onclick="showPanel('invite')">🔗 INVITAR</button>
+    <button class="btn" onclick="showPanel('chat')">💬 CHAT</button>
 </div>
 
-<!-- Panel invitación -->
-<div id="invitePanel" class="panel" onclick="hidePanel('invitePanel')">
+<!-- Panel de invitación -->
+<div id="invitePanel" class="panel" onclick="hidePanel('invite')">
     <div class="panel-content" onclick="event.stopPropagation()">
-        <h3 style="color:red;">Compartir</h3>
-        <input type="text" id="inviteLink" readonly>
-        <button onclick="copyLink()" style="width:100%; background:red;">Copiar</button>
-        <button onclick="hidePanel('invitePanel')" style="width:100%; margin-top:10px;">Cerrar</button>
+        <span class="close" onclick="hidePanel('invite')">✕</span>
+        <h3 style="color: red; margin-bottom: 15px;">🔗 Compartir Stream</h3>
+        <p style="color:#888; margin-bottom: 10px;">Envía este enlace a tu amigo:</p>
+        <input type="text" id="inviteLink" readonly value="Generando...">
+        <button onclick="copyLink()" style="width:100%; background: red; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold;">📋 COPIAR ENLACE</button>
     </div>
 </div>
 
-<!-- Panel chat -->
-<div id="chatPanel" class="panel" onclick="hidePanel('chatPanel')">
+<!-- Panel de chat -->
+<div id="chatPanel" class="panel" onclick="hidePanel('chat')">
     <div class="panel-content" onclick="event.stopPropagation()">
-        <h3 style="color:red;">Chat</h3>
+        <span class="close" onclick="hidePanel('chat')">✕</span>
+        <h3 style="color: red; margin-bottom: 15px;">💬 Chat</h3>
         <div id="chatMessages"></div>
-        <div style="display: flex;">
-            <input type="text" id="chatInput" placeholder="Mensaje..." style="flex:1;">
-            <button onclick="sendMessage()" style="background:red;">➤</button>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="chatInput" placeholder="Escribe un mensaje..." style="flex: 1;">
+            <button onclick="sendMessage()" style="background: red; color: white; border: none; width: 60px; border-radius: 8px; font-size: 20px;">➤</button>
         </div>
     </div>
 </div>
 
 <script>
+    // ============================================
+    // VARIABLES GLOBALES
+    // ============================================
     const video = document.getElementById('video');
-    let peer, connections = [], localStream = null;
-    let isPlaying = false;
+    let peer = null;
+    let connections = [];
+    let localStream = null;
+    let isBroadcasting = false;
+    let peerId = '';
 
+    // ============================================
+    // INICIALIZACIÓN - AHORA CON CONFIGURACIÓN CORRECTA
+    // ============================================
     function init() {
-        peer = new Peer();
+        console.log('🎬 Iniciando Streamnight...');
         
+        // Crear peer con servidores STUN públicos (para conexión P2P)
+        peer = new Peer({
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' }
+                ]
+            }
+        });
+
         peer.on('open', (id) => {
-            document.getElementById('status').innerText = 'ID: ' + id.substring(0,6);
-            const link = window.location.href.split('?')[0] + '?id=' + id;
-            document.getElementById('inviteLink').value = link;
+            peerId = id;
+            document.getElementById('status').innerHTML = `🟢 ONLINE · ${id.substring(0,6)}`;
             
+            // Generar enlace de invitación
+            const baseUrl = window.location.href.split('?')[0];
+            const inviteUrl = baseUrl + '?connect=' + id;
+            document.getElementById('inviteLink').value = inviteUrl;
+            
+            console.log('✅ Peer ID:', id);
+            
+            // Verificar si venimos de un enlace para conectar
             const urlParams = new URLSearchParams(window.location.search);
-            const targetId = urlParams.get('id');
+            const targetId = urlParams.get('connect');
             if (targetId && targetId !== id) {
+                console.log('🔌 Conectando a peer:', targetId);
                 connectToPeer(targetId);
             }
         });
-        
-        peer.on('connection', (conn) => setupConnection(conn));
-        
+
+        // ========================================
+        // RECIBIR CONEXIONES DE DATOS (CHAT)
+        // ========================================
+        peer.on('connection', (conn) => {
+            console.log('📞 Nueva conexión de datos de:', conn.peer);
+            setupDataConnection(conn);
+        });
+
+        // ========================================
+        // RECIBIR LLAMADAS DE VIDEO
+        // ========================================
         peer.on('call', (call) => {
-            call.answer();
+            console.log('📞 Recibiendo llamada de video de:', call.peer);
+            
+            // Si estamos emitiendo, responder con nuestro stream
+            if (localStream) {
+                call.answer(localStream);
+                console.log('✅ Respondiendo con nuestro stream');
+            } else {
+                // Si no emitimos, solo responder para recibir
+                call.answer();
+                console.log('✅ Respondiendo (modo receptor)');
+            }
+
             call.on('stream', (remoteStream) => {
+                console.log('📺 Stream de video recibido!');
                 video.srcObject = remoteStream;
-                video.play();
+                video.play()
+                    .then(() => console.log('▶️ Reproduciendo video remoto'))
+                    .catch(e => console.log('❌ Error reproduciendo:', e));
+                
                 updatePeerCount('add');
             });
+
+            call.on('error', (err) => {
+                console.error('❌ Error en llamada:', err);
+            });
+
+            call.on('close', () => {
+                console.log('🔌 Llamada cerrada');
+                updatePeerCount('remove');
+            });
+        });
+
+        peer.on('error', (err) => {
+            console.error('❌ Peer error:', err);
+            document.getElementById('status').innerHTML = '❌ Error de conexión';
+        });
+
+        peer.on('disconnected', () => {
+            console.log('⚠️ Peer desconectado, reconectando...');
+            peer.reconnect();
         });
     }
 
-    function startStream() {
-        const file = document.getElementById('fileInput').files[0];
-        if (!file) return;
-        
-        video.src = URL.createObjectURL(file);
-        video.play();
-        isPlaying = true;
-        document.getElementById('playPauseBtn').innerText = '⏸️';
-        
-        video.onloadeddata = () => {
-            setTimeout(() => {
-                localStream = video.captureStream ? video.captureStream(30) : video.mozCaptureStream(30);
-                
-                connections.forEach(conn => {
-                    if (conn.open) {
-                        peer.call(conn.peer, localStream);
-                    }
-                });
-            }, 500);
-        };
-    }
-
-    function connectToPeer(id) {
-        const conn = peer.connect(id);
-        setupConnection(conn);
-    }
-
-    function setupConnection(conn) {
+    // ========================================
+    // CONFIGURAR CONEXIÓN DE DATOS (CHAT Y CONTROL)
+    // ========================================
+    function setupDataConnection(conn) {
         connections.push(conn);
         updatePeerCount('add');
-        
+
+        conn.on('open', () => {
+            console.log('✅ Canal de datos abierto con:', conn.peer);
+            
+            // Si estamos emitiendo, enviar stream de video
+            if (localStream && isBroadcasting) {
+                console.log('📞 Llamando a peer para enviar video:', conn.peer);
+                const call = peer.call(conn.peer, localStream);
+                
+                call.on('error', (err) => {
+                    console.error('❌ Error al llamar:', err);
+                });
+            }
+        });
+
         conn.on('data', (data) => {
             if (data.type === 'chat') {
-                addChatMessage(data.user, data.msg, false);
-            } else if (data.type === 'playpause') {
-                if (data.playing) {
+                addChatMessage('👤 Amigo', data.msg, false);
+            } else if (data.type === 'control') {
+                if (data.action === 'play') {
                     video.play();
                     document.getElementById('playPauseBtn').innerText = '⏸️';
-                } else {
+                }
+                if (data.action === 'pause') {
                     video.pause();
                     document.getElementById('playPauseBtn').innerText = '▶️';
                 }
             }
         });
-        
+
         conn.on('close', () => {
+            console.log('🔌 Conexión cerrada con:', conn.peer);
             connections = connections.filter(c => c.peer !== conn.peer);
             updatePeerCount('remove');
         });
-        
-        if (localStream) {
-            peer.call(conn.peer, localStream);
-        }
     }
 
-    // FUNCIONES DE BOTONES
+    // ========================================
+    // CONECTAR A OTRO PEER (MODO VISOR)
+    // ========================================
+    function connectToPeer(targetId) {
+        console.log('🔌 Intentando conectar a:', targetId);
+        
+        // Primero conectar canal de datos
+        const conn = peer.connect(targetId);
+        setupDataConnection(conn);
+    }
+
+    // ========================================
+    // EMITIR VIDEO (MODO EMISOR)
+    // ========================================
+    function startStream() {
+        const file = document.getElementById('fileInput').files[0];
+        if (!file) {
+            alert('Selecciona un archivo de video');
+            return;
+        }
+
+        console.log('🎬 Archivo seleccionado:', file.name);
+
+        // Crear URL y reproducir localmente
+        const url = URL.createObjectURL(file);
+        video.src = url;
+        video.play()
+            .then(() => {
+                console.log('▶️ Video local reproduciendo');
+                document.getElementById('playPauseBtn').innerText = '⏸️';
+            })
+            .catch(e => console.error('❌ Error reproduciendo:', e));
+
+        // Esperar a que cargue el video para capturar stream
+        video.onloadeddata = () => {
+            console.log('✅ Video cargado, capturando stream...');
+            
+            setTimeout(() => {
+                try {
+                    // Capturar stream del video
+                    if (video.captureStream) {
+                        localStream = video.captureStream(30);
+                    } else if (video.mozCaptureStream) {
+                        localStream = video.mozCaptureStream(30);
+                    } else {
+                        alert('Tu navegador no soporta captureStream');
+                        return;
+                    }
+
+                    isBroadcasting = true;
+                    console.log('📡 Stream capturado:', localStream.getTracks().length + ' tracks');
+
+                    // Llamar a todos los peers conectados
+                    connections.forEach(conn => {
+                        if (conn.open) {
+                            console.log('📞 Enviando stream a:', conn.peer);
+                            const call = peer.call(conn.peer, localStream);
+                            
+                            call.on('error', (err) => {
+                                console.error('❌ Error enviando stream:', err);
+                            });
+                        }
+                    });
+
+                    addChatMessage('📢 Sistema', 'Transmisión iniciada', false);
+                    
+                } catch (error) {
+                    console.error('❌ Error capturando stream:', error);
+                    alert('Error al capturar el video: ' + error.message);
+                }
+            }, 1000);
+        };
+    }
+
+    // ========================================
+    // FUNCIONES DE CONTROL
+    // ========================================
     function togglePlay(event) {
         event.stopPropagation();
         if (!video.srcObject && !video.src) return;
-        
+
         if (video.paused) {
             video.play();
             document.getElementById('playPauseBtn').innerText = '⏸️';
+            
+            // Notificar a todos
             connections.forEach(conn => {
-                if (conn.open) conn.send({type: 'playpause', playing: true});
+                if (conn.open) conn.send({type: 'control', action: 'play'});
             });
         } else {
             video.pause();
             document.getElementById('playPauseBtn').innerText = '▶️';
+            
+            // Notificar a todos
             connections.forEach(conn => {
-                if (conn.open) conn.send({type: 'playpause', playing: false});
+                if (conn.open) conn.send({type: 'control', action: 'pause'});
             });
         }
     }
@@ -303,20 +441,25 @@
         }
     }
 
+    // ========================================
     // CHAT
+    // ========================================
     function sendMessage() {
         const input = document.getElementById('chatInput');
         const msg = input.value.trim();
         if (!msg) return;
-        
-        addChatMessage('Tú', msg, true);
-        
+
+        addChatMessage('👤 Tú', msg, true);
+
         connections.forEach(conn => {
             if (conn.open) {
-                conn.send({type: 'chat', user: 'Amigo', msg: msg});
+                conn.send({
+                    type: 'chat',
+                    msg: msg
+                });
             }
         });
-        
+
         input.value = '';
     }
 
@@ -326,26 +469,37 @@
         box.scrollTop = box.scrollHeight;
     }
 
+    // ========================================
     // INTERFAZ
-    function showInvite() { document.getElementById('invitePanel').classList.add('active'); }
-    function showChat() { document.getElementById('chatPanel').classList.add('active'); }
-    function hidePanel(id) { document.getElementById(id).classList.remove('active'); }
-    
+    // ========================================
+    function showPanel(id) {
+        document.getElementById(id + 'Panel').classList.add('active');
+    }
+
+    function hidePanel(id) {
+        document.getElementById(id + 'Panel').classList.remove('active');
+    }
+
     function copyLink() {
         const link = document.getElementById('inviteLink');
         link.select();
         document.execCommand('copy');
-        alert('¡Copiado!');
+        
+        const btn = event.target;
+        const originalText = btn.innerText;
+        btn.innerText = '✅ COPIADO!';
+        setTimeout(() => btn.innerText = originalText, 2000);
     }
 
     function updatePeerCount(action) {
         const el = document.getElementById('peerCount');
         let count = parseInt(el.innerText) || 0;
         if (action === 'add') count++;
-        if (action === 'remove') count--;
+        if (action === 'remove' && count > 0) count--;
         el.innerHTML = count + ' <span class="badge">50 Mbps</span>';
     }
 
+    // Iniciar
     window.onload = init;
 </script>
 </body>
