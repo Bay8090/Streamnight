@@ -6,33 +6,61 @@
     <title>Stream Simple</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: #000;
             color: white;
             height: 100vh;
             display: flex;
             flex-direction: column;
-            font-family: Arial, sans-serif;
+            font-family: Arial;
         }
         .video-container {
             flex: 1;
             background: #000;
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
-            cursor: pointer;
         }
         video {
             width: 100%;
-            height: 100%;
-            object-fit: contain;
+            max-height: 100%;
             background: #000;
+        }
+        #playPauseBtn {
+            position: absolute;
+            bottom: 80px;
+            left: 20px;
+            background: red;
+            color: white;
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+            font-size: 30px;
+            cursor: pointer;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #fullscreenBtn {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            background: red;
+            color: white;
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+            font-size: 30px;
+            cursor: pointer;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .controls {
             background: #111;
@@ -49,32 +77,19 @@
             border: none;
             border-radius: 8px;
             font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        button:active {
-            background: #333;
         }
         .btn-red {
             background: red;
         }
-        .btn-red:active {
-            background: #ff3333;
-        }
         .panel {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.9);
             display: none;
             padding: 20px;
-            z-index: 100;
+            z-index: 200;
         }
-        .panel.active {
-            display: block;
-        }
+        .panel.active { display: block; }
         .panel-content {
             background: #111;
             padding: 20px;
@@ -89,7 +104,6 @@
             background: #000;
             color: white;
             border: 1px solid #333;
-            border-radius: 5px;
         }
         #chatMessages {
             height: 300px;
@@ -97,7 +111,6 @@
             background: #000;
             padding: 10px;
             margin-bottom: 10px;
-            border: 1px solid #333;
         }
         .message {
             margin-bottom: 10px;
@@ -105,107 +118,27 @@
             background: #1a1a1a;
             border-radius: 5px;
         }
-        .message.own {
-            background: red;
-            text-align: right;
-        }
+        .message.own { background: red; text-align: right; }
         .status {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 10px; left: 10px;
             background: rgba(0,0,0,0.7);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            z-index: 10;
-            border: 1px solid #444;
+            padding: 5px 10px;
+            border-radius: 5px;
+            z-index: 100;
         }
         .peer-count {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 10px; right: 10px;
             background: rgba(0,0,0,0.7);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            z-index: 10;
-            border: 1px solid #444;
-        }
-        .fullscreen-btn {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            border: 1px solid #444;
-            color: white;
-            width: 50px;
-            height: 50px;
-            border-radius: 50px;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 10;
-            border: 1px solid red;
-        }
-        .fullscreen-btn:active {
-            background: red;
-        }
-        .rotate-btn {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.7);
-            border: 1px solid #444;
-            color: white;
-            width: 50px;
-            height: 50px;
-            border-radius: 50px;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 10;
-            border: 1px solid red;
-        }
-        .rotate-btn:active {
-            background: red;
-        }
-        .play-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            z-index: 20;
-        }
-        .play-overlay.visible {
-            opacity: 1;
-        }
-        .play-icon {
-            font-size: 80px;
-            color: white;
-            text-shadow: 0 0 20px red;
-        }
-        .close {
-            float: right;
-            font-size: 24px;
-            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+            z-index: 100;
         }
         .badge {
             background: red;
-            color: white;
-            padding: 3px 8px;
-            border-radius: 12px;
+            padding: 2px 6px;
+            border-radius: 10px;
             font-size: 10px;
             margin-left: 5px;
         }
@@ -213,20 +146,15 @@
 </head>
 <body>
 
-<div class="video-container" onclick="togglePlay(event)">
-    <video id="video" playsinline webkit-playsinline></video>
+<div class="video-container">
+    <video id="video" playsinline></video>
     
-    <!-- Play/Pause Overlay -->
-    <div class="play-overlay" id="playOverlay">
-        <div class="play-icon" id="playIcon">▶️</div>
-    </div>
+    <!-- BOTONES VISIBLES -->
+    <button id="playPauseBtn" onclick="togglePlay(event)">▶️</button>
+    <button id="fullscreenBtn" onclick="toggleFullscreen(event)">⛶</button>
     
     <div class="status" id="status">Iniciando...</div>
     <div class="peer-count" id="peerCount">0 <span class="badge">50 Mbps</span></div>
-    
-    <!-- Botones flotantes -->
-    <div class="fullscreen-btn" onclick="toggleFullscreen(event)">⛶</div>
-    <div class="rotate-btn" onclick="toggleOrientation(event)">🔄</div>
 </div>
 
 <div class="controls">
@@ -236,48 +164,41 @@
     <button onclick="showChat()">💬 Chat</button>
 </div>
 
-<!-- Panel de invitación -->
+<!-- Panel invitación -->
 <div id="invitePanel" class="panel" onclick="hidePanel('invitePanel')">
     <div class="panel-content" onclick="event.stopPropagation()">
-        <span class="close" onclick="hidePanel('invitePanel')">✕</span>
-        <h3 style="margin-bottom: 15px; color: red;">Compartir Stream</h3>
-        <p style="color:#888; margin-bottom:10px;">50 Mbps · Sin compresión · 4K Ready</p>
-        <input type="text" id="inviteLink" readonly value="Generando...">
-        <button onclick="copyLink()" style="width:100%; background: red;">Copiar enlace</button>
+        <h3 style="color:red;">Compartir</h3>
+        <input type="text" id="inviteLink" readonly>
+        <button onclick="copyLink()" style="width:100%; background:red;">Copiar</button>
+        <button onclick="hidePanel('invitePanel')" style="width:100%; margin-top:10px;">Cerrar</button>
     </div>
 </div>
 
-<!-- Panel de chat -->
+<!-- Panel chat -->
 <div id="chatPanel" class="panel" onclick="hidePanel('chatPanel')">
     <div class="panel-content" onclick="event.stopPropagation()">
-        <span class="close" onclick="hidePanel('chatPanel')">✕</span>
-        <h3 style="margin-bottom: 15px; color: red;">Chat</h3>
+        <h3 style="color:red;">Chat</h3>
         <div id="chatMessages"></div>
-        <div style="display: flex; gap: 5px;">
-            <input type="text" id="chatInput" placeholder="Escribe..." onkeypress="if(event.key==='Enter') sendMessage()">
-            <button onclick="sendMessage()" style="flex:0 0 60px; background: red;">➤</button>
+        <div style="display: flex;">
+            <input type="text" id="chatInput" placeholder="Mensaje..." style="flex:1;">
+            <button onclick="sendMessage()" style="background:red;">➤</button>
         </div>
     </div>
 </div>
 
 <script>
-    // Variables globales
     const video = document.getElementById('video');
     let peer, connections = [], localStream = null;
-    let playTimeout;
-    
-    // ============================================
-    // INICIALIZACIÓN
-    // ============================================
+    let isPlaying = false;
+
     function init() {
         peer = new Peer();
         
         peer.on('open', (id) => {
-            document.getElementById('status').innerHTML = '🟢 ID: ' + id.substring(0,6);
+            document.getElementById('status').innerText = 'ID: ' + id.substring(0,6);
             const link = window.location.href.split('?')[0] + '?id=' + id;
             document.getElementById('inviteLink').value = link;
             
-            // Conectar si venimos de un enlace
             const urlParams = new URLSearchParams(window.location.search);
             const targetId = urlParams.get('id');
             if (targetId && targetId !== id) {
@@ -285,12 +206,8 @@
             }
         });
         
-        // Recibir conexiones de chat
-        peer.on('connection', (conn) => {
-            setupConnection(conn);
-        });
+        peer.on('connection', (conn) => setupConnection(conn));
         
-        // Recibir stream de video
         peer.on('call', (call) => {
             call.answer();
             call.on('stream', (remoteStream) => {
@@ -299,52 +216,35 @@
                 updatePeerCount('add');
             });
         });
-        
-        // Detectar orientación
-        checkOrientation();
-        window.addEventListener('orientationchange', checkOrientation);
     }
-    
-    // ============================================
-    // EMITIR VIDEO (SIN LÍMITE DE BITRATE)
-    // ============================================
+
     function startStream() {
         const file = document.getElementById('fileInput').files[0];
         if (!file) return;
         
-        // Reproducir localmente
-        const url = URL.createObjectURL(file);
-        video.src = url;
+        video.src = URL.createObjectURL(file);
         video.play();
+        isPlaying = true;
+        document.getElementById('playPauseBtn').innerText = '⏸️';
         
-        // Capturar y enviar stream (sin límite de bitrate)
         video.onloadeddata = () => {
             setTimeout(() => {
-                // Capturar stream con la máxima calidad posible
-                localStream = video.captureStream ? video.captureStream(60) : video.mozCaptureStream(60);
+                localStream = video.captureStream ? video.captureStream(30) : video.mozCaptureStream(30);
                 
-                // Enviar a todos los conectados
                 connections.forEach(conn => {
                     if (conn.open) {
-                        const call = peer.call(conn.peer, localStream);
-                        // Sin restricciones de bitrate
+                        peer.call(conn.peer, localStream);
                     }
                 });
             }, 500);
         };
     }
-    
-    // ============================================
-    // CONECTAR A OTRO PEER
-    // ============================================
+
     function connectToPeer(id) {
         const conn = peer.connect(id);
         setupConnection(conn);
     }
-    
-    // ============================================
-    // CONFIGURAR CONEXIÓN
-    // ============================================
+
     function setupConnection(conn) {
         connections.push(conn);
         updatePeerCount('add');
@@ -352,9 +252,14 @@
         conn.on('data', (data) => {
             if (data.type === 'chat') {
                 addChatMessage(data.user, data.msg, false);
-            } else if (data.type === 'control') {
-                if (data.action === 'play') video.play();
-                if (data.action === 'pause') video.pause();
+            } else if (data.type === 'playpause') {
+                if (data.playing) {
+                    video.play();
+                    document.getElementById('playPauseBtn').innerText = '⏸️';
+                } else {
+                    video.pause();
+                    document.getElementById('playPauseBtn').innerText = '▶️';
+                }
             }
         });
         
@@ -363,102 +268,42 @@
             updatePeerCount('remove');
         });
         
-        // Enviar stream si estamos emitiendo
         if (localStream) {
             peer.call(conn.peer, localStream);
         }
     }
-    
-    // ============================================
-    // PLAY/PAUSE CON OVERLAY (5 SEGUNDOS)
-    // ============================================
+
+    // FUNCIONES DE BOTONES
     function togglePlay(event) {
-        // Evitar que el click en botones active esto
-        if (event.target.classList.contains('fullscreen-btn') || 
-            event.target.classList.contains('rotate-btn')) {
-            return;
-        }
-        
+        event.stopPropagation();
         if (!video.srcObject && !video.src) return;
-        
-        const overlay = document.getElementById('playOverlay');
-        const icon = document.getElementById('playIcon');
         
         if (video.paused) {
             video.play();
-            icon.textContent = '▶️';
-            
-            // Notificar a todos
+            document.getElementById('playPauseBtn').innerText = '⏸️';
             connections.forEach(conn => {
-                if (conn.open) conn.send({type: 'control', action: 'play'});
+                if (conn.open) conn.send({type: 'playpause', playing: true});
             });
         } else {
             video.pause();
-            icon.textContent = '⏸️';
-            
-            // Notificar a todos
+            document.getElementById('playPauseBtn').innerText = '▶️';
             connections.forEach(conn => {
-                if (conn.open) conn.send({type: 'control', action: 'pause'});
+                if (conn.open) conn.send({type: 'playpause', playing: false});
             });
         }
-        
-        // Mostrar overlay
-        overlay.classList.add('visible');
-        
-        // Ocultar después de 5 segundos
-        clearTimeout(playTimeout);
-        playTimeout = setTimeout(() => {
-            overlay.classList.remove('visible');
-        }, 5000);
     }
-    
-    // ============================================
-    // PANTALLA COMPLETA
-    // ============================================
+
     function toggleFullscreen(event) {
         event.stopPropagation();
-        
         if (!document.fullscreenElement) {
-            if (video.requestFullscreen) {
-                video.requestFullscreen();
-            } else if (video.webkitRequestFullscreen) {
-                video.webkitRequestFullscreen();
-            }
+            if (video.requestFullscreen) video.requestFullscreen();
+            else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
         } else {
             document.exitFullscreen();
         }
     }
-    
-    // ============================================
-    // ORIENTACIÓN AUTOMÁTICA
-    // ============================================
-    function toggleOrientation(event) {
-        event.stopPropagation();
-        
-        if (screen.orientation && screen.orientation.lock) {
-            if (window.orientation === 0 || window.orientation === 180) {
-                screen.orientation.lock('landscape').catch(() => {});
-            } else {
-                screen.orientation.lock('portrait').catch(() => {});
-            }
-        }
-    }
-    
-    function checkOrientation() {
-        // Si está en vertical, sugerir girar
-        if (window.orientation === 0 || window.orientation === 180) {
-            // Mostrar mensaje sutil
-            document.getElementById('status').innerHTML = '🟡 Gira el teléfono ↻';
-            setTimeout(() => {
-                const id = peer?.id || '';
-                document.getElementById('status').innerHTML = '🟢 ID: ' + id.substring(0,6);
-            }, 3000);
-        }
-    }
-    
-    // ============================================
+
     // CHAT
-    // ============================================
     function sendMessage() {
         const input = document.getElementById('chatInput');
         const msg = input.value.trim();
@@ -468,57 +313,39 @@
         
         connections.forEach(conn => {
             if (conn.open) {
-                conn.send({
-                    type: 'chat',
-                    user: 'Amigo',
-                    msg: msg
-                });
+                conn.send({type: 'chat', user: 'Amigo', msg: msg});
             }
         });
         
         input.value = '';
     }
-    
+
     function addChatMessage(user, msg, isOwn) {
         const box = document.getElementById('chatMessages');
         box.innerHTML += `<div class="message ${isOwn ? 'own' : ''}"><b>${user}:</b> ${msg}</div>`;
         box.scrollTop = box.scrollHeight;
     }
-    
-    // ============================================
+
     // INTERFAZ
-    // ============================================
-    function showInvite() {
-        document.getElementById('invitePanel').classList.add('active');
-    }
-    
-    function showChat() {
-        document.getElementById('chatPanel').classList.add('active');
-    }
-    
-    function hidePanel(id) {
-        document.getElementById(id).classList.remove('active');
-    }
+    function showInvite() { document.getElementById('invitePanel').classList.add('active'); }
+    function showChat() { document.getElementById('chatPanel').classList.add('active'); }
+    function hidePanel(id) { document.getElementById(id).classList.remove('active'); }
     
     function copyLink() {
         const link = document.getElementById('inviteLink');
         link.select();
         document.execCommand('copy');
-        
-        const btn = event.target;
-        const original = btn.innerText;
-        btn.innerText = '✅ Copiado!';
-        setTimeout(() => btn.innerText = original, 2000);
+        alert('¡Copiado!');
     }
-    
+
     function updatePeerCount(action) {
-        const countEl = document.getElementById('peerCount');
-        let count = parseInt(countEl.innerText) || 0;
+        const el = document.getElementById('peerCount');
+        let count = parseInt(el.innerText) || 0;
         if (action === 'add') count++;
-        if (action === 'remove' && count > 0) count--;
-        countEl.innerHTML = count + ' <span class="badge">50 Mbps</span>';
+        if (action === 'remove') count--;
+        el.innerHTML = count + ' <span class="badge">50 Mbps</span>';
     }
-    
+
     window.onload = init;
 </script>
 </body>
