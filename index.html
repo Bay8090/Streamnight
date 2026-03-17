@@ -2,9 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Streamnight · P2P 4K · 50 Mbps</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Streamnight · P2P Directo</title>
     <style>
         * {
             margin: 0;
@@ -15,7 +14,7 @@
 
         body {
             background: #0a0a0a;
-            color: #ffffff;
+            color: white;
             height: 100vh;
             overflow: hidden;
             position: fixed;
@@ -26,45 +25,37 @@
             height: 100%;
             display: flex;
             flex-direction: column;
-            background: #000;
         }
 
         /* Header */
         .header {
-            background: rgba(10, 10, 10, 0.95);
-            padding: 12px 20px;
+            background: #111;
+            padding: 15px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
-            z-index: 30;
+            border-bottom: 2px solid #00ffff;
         }
 
         .logo {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .logo-text {
-            font-weight: 700;
-            font-size: 20px;
+            font-size: 22px;
+            font-weight: bold;
             color: #00ffff;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            text-shadow: 0 0 10px #00ffff;
         }
 
         .peer-id {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 6px 12px;
+            background: #222;
+            padding: 8px 15px;
             border-radius: 30px;
             font-size: 12px;
             font-family: monospace;
-            border: 1px solid rgba(0, 255, 255, 0.3);
+            border: 1px solid #00ffff;
             color: #00ffff;
         }
 
         .btn-icon {
-            background: rgba(255, 255, 255, 0.1);
+            background: #222;
             border: none;
             color: white;
             width: 40px;
@@ -72,9 +63,10 @@
             border-radius: 40px;
             font-size: 18px;
             cursor: pointer;
+            margin-left: 10px;
         }
 
-        /* Contenedor de video */
+        /* Video container */
         .video-container {
             flex: 1;
             position: relative;
@@ -82,7 +74,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
         }
 
         #videoPlayer {
@@ -93,7 +84,7 @@
         }
 
         /* Overlay de play/pause */
-        .play-pause-overlay {
+        .play-overlay {
             position: absolute;
             top: 0;
             left: 0;
@@ -102,86 +93,40 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.7);
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.3s;
             pointer-events: none;
-            z-index: 50;
+            z-index: 10;
         }
 
-        .play-pause-overlay.visible {
+        .play-overlay.visible {
             opacity: 1;
         }
 
-        .play-pause-icon {
+        .play-icon {
             font-size: 80px;
             color: #00ffff;
-            text-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
-            animation: pulse 1s ease infinite;
+            animation: pulse 1s infinite;
         }
 
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            50% { transform: scale(1.2); }
         }
 
-        /* Overlay de información */
-        .video-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
-            z-index: 20;
-        }
-
+        /* Badge de calidad */
         .quality-badge {
-            background: rgba(0, 255, 255, 0.9);
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: #00ffff;
             color: #000;
             padding: 8px 16px;
             border-radius: 30px;
-            font-weight: 600;
+            font-weight: bold;
             font-size: 14px;
-        }
-
-        .stats-grid {
-            display: flex;
-            gap: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 8px 16px;
-            border-radius: 30px;
-        }
-
-        .stat {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-        }
-
-        /* Orientación warning */
-        .orientation-warning {
-            position: absolute;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: #00ffff;
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-size: 14px;
-            border: 1px solid #00ffff;
-            display: none;
-            z-index: 60;
-            white-space: nowrap;
-        }
-
-        .orientation-warning.visible {
-            display: block;
+            z-index: 5;
         }
 
         /* Chat */
@@ -191,14 +136,13 @@
             top: 0;
             bottom: 0;
             width: 300px;
-            background: rgba(15, 15, 15, 0.95);
-            backdrop-filter: blur(20px);
-            border-left: 1px solid rgba(0, 255, 255, 0.2);
+            background: #111;
+            border-left: 2px solid #00ffff;
             display: flex;
             flex-direction: column;
             transform: translateX(100%);
-            transition: transform 0.3s ease;
-            z-index: 100;
+            transition: transform 0.3s;
+            z-index: 20;
         }
 
         .chat-sidebar.active {
@@ -207,7 +151,7 @@
 
         .chat-header {
             padding: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid #333;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -221,26 +165,23 @@
             flex: 1;
             overflow-y: auto;
             padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
         }
 
         .message {
-            display: flex;
-            flex-direction: column;
+            margin-bottom: 15px;
             max-width: 90%;
         }
 
         .message.own {
-            align-self: flex-end;
+            margin-left: auto;
         }
 
         .message-bubble {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px 14px;
+            background: #222;
+            padding: 10px 15px;
             border-radius: 18px;
             font-size: 13px;
+            word-break: break-word;
         }
 
         .message.own .message-bubble {
@@ -250,15 +191,15 @@
 
         .chat-input-area {
             padding: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid #333;
             display: flex;
             gap: 10px;
         }
 
         .chat-input {
             flex: 1;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #222;
+            border: 1px solid #333;
             border-radius: 25px;
             padding: 12px 18px;
             color: white;
@@ -282,27 +223,26 @@
 
         /* Toolbar */
         .toolbar {
-            background: rgba(10, 10, 10, 0.95);
-            padding: 16px 24px;
+            background: #111;
+            padding: 15px 20px;
             display: flex;
-            gap: 15px;
-            border-top: 1px solid rgba(0, 255, 255, 0.2);
-            z-index: 30;
+            gap: 10px;
+            border-top: 2px solid #00ffff;
         }
 
         .tool-btn {
             flex: 1;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #222;
+            border: 1px solid #333;
             color: white;
-            padding: 14px;
+            padding: 15px;
             border-radius: 12px;
-            font-weight: 600;
+            font-weight: bold;
             font-size: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
             cursor: pointer;
         }
 
@@ -320,7 +260,7 @@
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 200;
+            z-index: 30;
         }
 
         .modal.active {
@@ -328,12 +268,12 @@
         }
 
         .modal-content {
-            background: #1a1a1a;
+            background: #111;
             border-radius: 24px;
             padding: 30px;
             width: 90%;
             max-width: 400px;
-            border: 1px solid #00ffff;
+            border: 2px solid #00ffff;
         }
 
         .link-box {
@@ -357,8 +297,20 @@
             color: #000;
             padding: 0 25px;
             border-radius: 12px;
-            font-weight: 600;
+            font-weight: bold;
             cursor: pointer;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 12px;
+            border: 1px solid #00ffff;
+            z-index: 5;
         }
     </style>
 </head>
@@ -367,13 +319,10 @@
 <div class="app">
     <!-- Header -->
     <div class="header">
-        <div class="logo">
-            <span class="logo-text">🌙 Streamnight</span>
-        </div>
-        <div class="header-actions">
+        <div class="logo">🌙 Streamnight</div>
+        <div style="display: flex; align-items: center;">
             <span class="peer-id" id="peerIdDisplay">Conectando...</span>
             <button class="btn-icon" onclick="toggleChat()">💬</button>
-            <button class="btn-icon" onclick="showInvite()">👥</button>
         </div>
     </div>
 
@@ -381,35 +330,23 @@
     <div class="video-container" onclick="togglePlay()">
         <video id="videoPlayer" playsinline webkit-playsinline></video>
         
-        <!-- Play/Pause Overlay (5 segundos) -->
-        <div class="play-pause-overlay" id="playPauseOverlay">
-            <div class="play-pause-icon" id="playPauseIcon">▶️</div>
+        <!-- Play/Pause overlay -->
+        <div class="play-overlay" id="playOverlay">
+            <div class="play-icon" id="playIcon">▶️</div>
         </div>
         
-        <!-- Overlay info -->
-        <div class="video-overlay">
-            <div class="quality-badge" id="qualityBadge">
-                4K · 50 Mbps
-            </div>
-            <div class="stats-grid">
-                <div class="stat">
-                    <span>📊</span>
-                    <span id="bitrateStat">50 Mbps</span>
-                </div>
-                <div class="stat">
-                    <span>👥</span>
-                    <span id="viewerCount">0</span>
-                </div>
-            </div>
+        <!-- Quality badge -->
+        <div class="quality-badge" id="qualityBadge">
+            🌙 50 Mbps
         </div>
-
-        <!-- Orientación warning -->
-        <div class="orientation-warning" id="orientationWarning">
-            🌙 Gira el dispositivo para mejor experiencia
+        
+        <!-- Status -->
+        <div class="status-indicator" id="statusIndicator">
+            👥 0 espectadores
         </div>
     </div>
 
-    <!-- Chat -->
+    <!-- Chat sidebar -->
     <div class="chat-sidebar" id="chatSidebar">
         <div class="chat-header">
             <h3>Chat</h3>
@@ -424,18 +361,18 @@
 
     <!-- Toolbar -->
     <div class="toolbar">
-        <input type="file" id="fileInput" hidden accept="video/*" onchange="startBroadcasting(event)">
+        <input type="file" id="fileInput" hidden accept="video/*" onchange="handleFileSelect(event)">
         <button class="tool-btn primary" onclick="document.getElementById('fileInput').click()">
             📁 Emitir
         </button>
         <button class="tool-btn" onclick="toggleMute()" id="muteBtn">
             🔊 Audio
         </button>
+        <button class="tool-btn" onclick="showInvite()">
+            🔗 Invitar
+        </button>
         <button class="tool-btn" onclick="toggleFullscreen()">
             ⛶ Pantalla completa
-        </button>
-        <button class="tool-btn" onclick="toggleOrientation()">
-            🔄 Girar
         </button>
     </div>
 </div>
@@ -443,163 +380,87 @@
 <!-- Modal invitación -->
 <div class="modal" id="inviteModal" onclick="this.classList.remove('active')">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h2 style="color:#00ffff;">Compartir</h2>
-        <p style="color:#888;">Enlace directo P2P:</p>
+        <h2 style="color:#00ffff;">Compartir Stream</h2>
+        <p style="color:#888;">Envía este enlace a tus amigos:</p>
         <div class="link-box">
             <input type="text" id="inviteLink" readonly value="Generando...">
             <button class="copy-btn" onclick="copyInviteLink()">Copiar</button>
         </div>
+        <p style="color:#888; font-size:12px; margin-top:15px;">
+            🔗 El enlace contiene tu ID único
+        </p>
     </div>
 </div>
 
 <script>
-    // Configuración
+    // ============================================
+    // CONFIGURACIÓN
+    // ============================================
     const CONFIG = {
-        BITRATE: 50000000,
-        FPS: 30,
         STUN_SERVERS: [
-            'stun:stun.l.google.com:19302',
-            'stun:stun1.l.google.com:19302'
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' }
         ]
     };
 
     // Elementos DOM
     const video = document.getElementById('videoPlayer');
-    let peer;
-    let connections = [];
-    let myStream = null;
-    let broadcastActive = false;
+    let peerConnection;
+    let dataChannel;
+    let localStream = null;
+    let remoteStream = null;
+    let isBroadcasting = false;
+    let viewers = new Set();
     let userName = 'User_' + Math.floor(Math.random() * 1000);
-    let playPauseTimeout;
+    let playTimeout;
 
     // ============================================
-    // FUNCIÓN CRÍTICA: INICIALIZACIÓN CORREGIDA
+    // INICIALIZACIÓN - CREAR PEER CONNECTION
     // ============================================
-    function init() {
-        console.log('🎬 Inicializando Streamnight...');
+    async function init() {
+        console.log('🚀 Iniciando Streamnight...');
         
-        // Configurar PeerJS con opciones más estables
-        peer = new Peer({
-            config: {
-                iceServers: CONFIG.STUN_SERVERS.map(url => ({ urls: url })),
-                iceTransportPolicy: 'all'
-            },
-            debug: 2 // Para ver más detalles en consola
-        });
-
-        peer.on('open', (id) => {
-            console.log('✅ PeerJS conectado con ID:', id);
-            document.getElementById('peerIdDisplay').innerHTML = `🌙 ${id.substring(0,8)}`;
-            
-            // Generar link de invitación
-            const link = `${window.location.origin}${window.location.pathname}#${id}`;
-            document.getElementById('inviteLink').value = link;
-            
-            // Auto-conectar si hay hash
-            if(window.location.hash) {
-                const hostId = window.location.hash.substring(1);
-                console.log('🔗 Conectando a host:', hostId);
-                connectToHost(hostId);
-            }
-        });
-
-        // ========================================
-        // CORRECCIÓN: Manejo de llamadas entrantes
-        // ========================================
-        peer.on('call', (call) => {
-            console.log('📞 Llamada entrante de:', call.peer);
-            
-            // Responder a la llamada
-            call.answer();
-            
-            call.on('stream', (remoteStream) => {
-                console.log('📺 Stream recibido correctamente');
-                
-                // Asignar stream al video
-                video.srcObject = remoteStream;
-                
-                // Forzar reproducción
-                video.play()
-                    .then(() => {
-                        console.log('▶️ Reproducción iniciada');
-                        updateViewerCount('add');
-                    })
-                    .catch(e => {
-                        console.error('Error al reproducir:', e);
-                        // Intentar con muted
-                        video.muted = true;
-                        video.play().then(() => {
-                            console.log('▶️ Reproducción iniciada (muted)');
-                            updateViewerCount('add');
-                        });
-                    });
-            });
-
-            call.on('error', (err) => {
-                console.error('❌ Error en llamada:', err);
-            });
-
-            call.on('close', () => {
-                console.log('📞 Llamada cerrada');
-                updateViewerCount('remove');
-            });
-        });
-
-        // ========================================
-        // CORRECCIÓN: Conexiones de datos
-        // ========================================
-        peer.on('connection', (conn) => {
-            console.log('🔌 Conexión de datos de:', conn.peer);
-            
-            connections.push(conn);
-            updateViewerCount('add');
-            
-            conn.on('data', (data) => {
-                if (data.type === 'chat') {
-                    addChatMessage(data.user, data.message, false);
-                } else if (data.type === 'control') {
-                    // Control remoto (play/pause)
-                    if (data.action === 'play') video.play();
-                    if (data.action === 'pause') video.pause();
-                }
-            });
-
-            conn.on('close', () => {
-                connections = connections.filter(c => c.peer !== conn.peer);
-                updateViewerCount('remove');
-            });
-
-            // Enviar mensaje de bienvenida
-            conn.send({
-                type: 'chat',
-                user: 'Sistema',
-                message: 'Bienvenido a Streamnight 🌙'
-            });
-        });
-
-        peer.on('error', (err) => {
-            console.error('❌ PeerJS error:', err);
-        });
-
-        // Detectar orientación
-        setupOrientationDetection();
+        // Generar ID único para este peer
+        const peerId = generatePeerId();
+        document.getElementById('peerIdDisplay').innerHTML = `🌙 ${peerId}`;
+        
+        // Guardar ID en URL para compartir
+        const inviteLink = `${window.location.origin}${window.location.pathname}?id=${peerId}`;
+        document.getElementById('inviteLink').value = inviteLink;
+        
+        // Verificar si venimos de un enlace con ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetId = urlParams.get('id');
+        
+        if (targetId && targetId !== peerId) {
+            console.log('🔗 Conectando a:', targetId);
+            connectToPeer(targetId);
+        }
+        
+        // Configurar detección de orientación
+        setupOrientation();
     }
 
-    // ========================================
-    // CORRECCIÓN: Emitir video (Broadcaster)
-    // ========================================
-    async function startBroadcasting(event) {
+    // Generar ID aleatorio
+    function generatePeerId() {
+        return Math.random().toString(36).substring(2, 8) + 
+               Math.random().toString(36).substring(2, 8);
+    }
+
+    // ============================================
+    // FUNCIÓN PRINCIPAL: EMITIR VIDEO
+    // ============================================
+    async function handleFileSelect(event) {
         const file = event.target.files[0];
         if (!file) return;
-        
+
         try {
-            console.log('🎥 Archivo seleccionado:', file.name);
-            
             // Crear URL del video
-            const url = URL.createObjectURL(file);
-            video.src = url;
+            const videoUrl = URL.createObjectURL(file);
+            video.src = videoUrl;
             
-            // Esperar a que cargue el video
+            // Esperar que cargue el video
             await new Promise((resolve) => {
                 video.onloadedmetadata = resolve;
             });
@@ -608,96 +469,156 @@
             await video.play();
             console.log('✅ Video local reproduciendo');
             
-            // Capturar stream
+            // CAPTURAR EL STREAM DEL VIDEO
             if (video.captureStream) {
-                myStream = video.captureStream(CONFIG.FPS);
-                console.log('📡 Stream capturado');
+                localStream = video.captureStream(30); // 30 fps
             } else if (video.mozCaptureStream) {
-                myStream = video.mozCaptureStream(CONFIG.FPS);
+                localStream = video.mozCaptureStream(30);
             } else {
-                throw new Error('CaptureStream no soportado');
+                alert('Tu navegador no soporta captureStream');
+                return;
             }
             
-            broadcastActive = true;
+            isBroadcasting = true;
             document.getElementById('qualityBadge').innerHTML = '🔴 EMITIENDO · 4K';
             
-            // Notificar a peers conectados
-            connections.forEach(conn => {
-                if (conn.open) {
-                    console.log('📞 Llamando a peer:', conn.peer);
-                    
-                    const call = peer.call(conn.peer, myStream, {
-                        videoBandwidth: CONFIG.BITRATE,
-                        metadata: { quality: '4K', bitrate: '50Mbps' }
-                    });
-                    
-                    call.on('error', (err) => {
-                        console.error('Error en llamada a peer:', err);
-                    });
-                }
-            });
+            // Si ya hay viewers conectados, enviar stream
+            if (peerConnection && peerConnection.connectionState === 'connected') {
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+            }
             
         } catch (error) {
-            console.error('❌ Error broadcasting:', error);
-            alert('Error al emitir. Revisa la consola.');
+            console.error('Error:', error);
+            alert('Error al cargar el video');
         }
     }
 
-    // ========================================
-    // CORRECCIÓN: Conectar a host (Viewer)
-    // ========================================
-    function connectToHost(hostId) {
-        console.log('🔗 Intentando conectar a:', hostId);
+    // ============================================
+    // CONECTAR A OTRO PEER (VISOR)
+    // ============================================
+    async function connectToPeer(targetId) {
+        console.log('🔌 Conectando a peer:', targetId);
         
-        // Primero conectar canal de datos
-        const conn = peer.connect(hostId);
-        
-        conn.on('open', () => {
-            console.log('✅ Canal de datos abierto');
-            connections.push(conn);
-            updateViewerCount('add');
-            addChatMessage('Sistema', 'Conectado al stream', false);
-            
-            // Luego solicitar stream
-            console.log('📞 Solicitando stream...');
-            const call = peer.call(hostId, null); // null porque no enviamos stream
-            
-            call.on('stream', (remoteStream) => {
-                console.log('📺 Stream recibido!');
-                video.srcObject = remoteStream;
-                
-                // Intentar reproducir (necesita interacción del usuario)
-                const playPromise = video.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(e => {
-                        console.log('Autoplay bloqueado, esperando interacción');
-                        // Mostrar mensaje para hacer clic
-                        addChatMessage('Sistema', 'Haz clic en el video para reproducir', false);
-                    });
-                }
-            });
-            
-            call.on('error', (err) => {
-                console.error('❌ Error al recibir stream:', err);
-                addChatMessage('Sistema', 'Error al conectar stream', false);
-            });
+        // Crear nueva conexión peer
+        peerConnection = new RTCPeerConnection({
+            iceServers: CONFIG.STUN_SERVERS
         });
+
+        // Crear canal de datos para chat
+        dataChannel = peerConnection.createDataChannel('chat');
+        setupDataChannel();
+
+        // Manejar tracks entrantes
+        peerConnection.ontrack = (event) => {
+            console.log('📺 Recibiendo stream');
+            
+            if (!remoteStream) {
+                remoteStream = new MediaStream();
+                video.srcObject = remoteStream;
+            }
+            
+            event.streams[0].getTracks().forEach(track => {
+                remoteStream.addTrack(track);
+            });
+            
+            // Intentar reproducir
+            video.play()
+                .then(() => console.log('▶️ Reproduciendo'))
+                .catch(e => console.log('Autoplay bloqueado:', e));
+            
+            updateViewerCount('add');
+        };
+
+        // Manejar candidatos ICE
+        peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                console.log('📡 ICE candidate generado');
+                // En una implementación real, enviaríamos esto al otro peer
+                // Por ahora usamos señalización manual
+            }
+        };
+
+        peerConnection.onconnectionstatechange = () => {
+            console.log('🔌 Estado:', peerConnection.connectionState);
+            if (peerConnection.connectionState === 'connected') {
+                console.log('✅ Conectado!');
+            }
+        };
+
+        // Crear oferta
+        try {
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            
+            // Aquí necesitaríamos enviar la oferta al otro peer
+            // Por simplicidad, usaremos prompt para señalización manual
+            const offerString = JSON.stringify(peerConnection.localDescription);
+            console.log('📤 OFERTA:', offerString);
+            
+            // En un sistema real, esto se enviaría por un servidor de señalización
+            // Por ahora, el otro peer debe ingresar esta oferta manualmente
+            prompt('Copia esta oferta y envíala al otro peer:', offerString);
+            
+        } catch (error) {
+            console.error('Error creating offer:', error);
+        }
+    }
+
+    // ============================================
+    // CHAT
+    // ============================================
+    function setupDataChannel() {
+        if (!dataChannel) return;
         
-        conn.on('data', (data) => {
+        dataChannel.onopen = () => {
+            console.log('💬 Canal de chat abierto');
+        };
+        
+        dataChannel.onmessage = (event) => {
+            const data = JSON.parse(event.data);
             if (data.type === 'chat') {
                 addChatMessage(data.user, data.message, false);
             }
-        });
+        };
     }
 
-    // ========================================
-    // Play/Pause Overlay (5 segundos)
-    // ========================================
+    function sendMessage() {
+        const input = document.getElementById('chatInput');
+        const message = input.value.trim();
+        if (!message) return;
+        
+        addChatMessage(userName, message, true);
+        
+        if (dataChannel && dataChannel.readyState === 'open') {
+            dataChannel.send(JSON.stringify({
+                type: 'chat',
+                user: userName,
+                message: message
+            }));
+        }
+        
+        input.value = '';
+    }
+
+    function addChatMessage(user, message, isOwn) {
+        const container = document.getElementById('chatMessages');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${isOwn ? 'own' : ''}`;
+        msgDiv.innerHTML = `<div class="message-bubble"><strong>${user}:</strong> ${message}</div>`;
+        container.appendChild(msgDiv);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // ============================================
+    // PLAY/PAUSE OVERLAY (5 segundos)
+    // ============================================
     function togglePlay() {
         if (!video.srcObject && !video.src) return;
         
-        const overlay = document.getElementById('playPauseOverlay');
-        const icon = document.getElementById('playPauseIcon');
+        const overlay = document.getElementById('playOverlay');
+        const icon = document.getElementById('playIcon');
         
         if (video.paused) {
             video.play();
@@ -707,109 +628,38 @@
             icon.textContent = '⏸️';
         }
         
-        // Mostrar overlay
         overlay.classList.add('visible');
         
-        // Enviar comando a peers
-        connections.forEach(conn => {
-            if (conn.open) {
-                conn.send({
-                    type: 'control',
-                    action: video.paused ? 'pause' : 'play'
-                });
-            }
-        });
-        
-        // Ocultar después de 5 segundos
-        clearTimeout(playPauseTimeout);
-        playPauseTimeout = setTimeout(() => {
+        clearTimeout(playTimeout);
+        playTimeout = setTimeout(() => {
             overlay.classList.remove('visible');
         }, 5000);
     }
 
-    // ========================================
-    // Detección de orientación
-    // ========================================
-    function setupOrientationDetection() {
-        window.addEventListener('orientationchange', function() {
-            const warning = document.getElementById('orientationWarning');
-            
+    // ============================================
+    // ORIENTACIÓN
+    // ============================================
+    function setupOrientation() {
+        window.addEventListener('orientationchange', () => {
             if (window.orientation === 0 || window.orientation === 180) {
-                // Vertical
-                warning.classList.add('visible');
-                setTimeout(() => warning.classList.remove('visible'), 3000);
-            } else {
-                // Horizontal
-                warning.classList.remove('visible');
+                // Modo vertical - mostrar advertencia
+                alert('🌙 Gira el dispositivo para mejor experiencia');
             }
         });
-        
-        // Detectar al inicio
-        setTimeout(() => {
-            if (window.orientation === 0 || window.orientation === 180) {
-                document.getElementById('orientationWarning').classList.add('visible');
-                setTimeout(() => {
-                    document.getElementById('orientationWarning').classList.remove('visible');
-                }, 3000);
-            }
-        }, 1000);
     }
 
-    function toggleOrientation() {
-        if (screen.orientation && screen.orientation.lock) {
-            if (window.orientation === 0 || window.orientation === 180) {
-                screen.orientation.lock('landscape').catch(e => console.log(e));
-            } else {
-                screen.orientation.lock('portrait').catch(e => console.log(e));
-            }
-        } else {
-            alert('Usa la rotación automática del dispositivo');
-        }
-    }
-
-    // ========================================
-    // Funciones de chat (sin cambios)
-    // ========================================
+    // ============================================
+    // FUNCIONES DE INTERFAZ
+    // ============================================
     function toggleChat() {
         document.getElementById('chatSidebar').classList.toggle('active');
-    }
-    
-    function sendMessage() {
-        const input = document.getElementById('chatInput');
-        const message = input.value.trim();
-        if (!message) return;
-        
-        addChatMessage(userName, message, true);
-        
-        connections.forEach(conn => {
-            if (conn.open) {
-                conn.send({
-                    type: 'chat',
-                    user: userName,
-                    message: message
-                });
-            }
-        });
-        
-        input.value = '';
-    }
-    
-    function addChatMessage(user, message, isOwn) {
-        const container = document.getElementById('chatMessages');
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `message ${isOwn ? 'own' : ''}`;
-        
-        msgDiv.innerHTML = `<div class="message-bubble"><strong>${user}:</strong> ${message}</div>`;
-        
-        container.appendChild(msgDiv);
-        container.scrollTop = container.scrollHeight;
     }
 
     function toggleMute() {
         video.muted = !video.muted;
         document.getElementById('muteBtn').innerHTML = video.muted ? '🔇 Audio' : '🔊 Audio';
     }
-    
+
     function toggleFullscreen() {
         if (!document.fullscreenElement) {
             if (video.requestFullscreen) {
@@ -821,11 +671,11 @@
             document.exitFullscreen();
         }
     }
-    
+
     function showInvite() {
         document.getElementById('inviteModal').classList.add('active');
     }
-    
+
     function copyInviteLink() {
         const input = document.getElementById('inviteLink');
         input.select();
@@ -837,13 +687,10 @@
     }
 
     function updateViewerCount(action) {
-        const countEl = document.getElementById('viewerCount');
-        let count = parseInt(countEl.textContent) || 0;
+        if (action === 'add') viewers.add('viewer');
+        if (action === 'remove') viewers.clear();
         
-        if (action === 'add') count++;
-        if (action === 'remove' && count > 0) count--;
-        
-        countEl.textContent = count;
+        document.getElementById('statusIndicator').innerHTML = `👥 ${viewers.size} espectadores`;
     }
 
     // Iniciar
